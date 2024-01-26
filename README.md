@@ -33,14 +33,14 @@ By running `make dOPRF64 OPT_LEVEL=FAST` you will compile ARM64 assembly code wh
 
 ---
 
-\lambda is set to 1 by default
-Change the dOPRF.c macro LAMBDA to change the lambda value
+Lambda is set to 1 by default.
+Change the macro LAMBDA in the dOPRF.c file to change the lambda value.
 
 The parameters n and t are 4 and 1 by default.
-Change the dOPRF.c macros CONST_N and CONST_T to change the n and t values.
+Change the  macros CONST_N and CONST_T in the dOPRF.c file to change the n and t values.
 
-The adversary is malicious by default
-Change the dOPRF.c macro ADVERSARY to SEMIHONEST to change the adversarial type
+The adversary is malicious by default.
+Change the ADVERSARY macro in the dOPRF.c file to SEMIHONEST to change the adversarial type.
 
 ---
 
