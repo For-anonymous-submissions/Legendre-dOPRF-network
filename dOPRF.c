@@ -129,14 +129,20 @@ int factorial(unsigned int n){
 #define HWT_64BIT(x)     (HWT_32BIT(x) + HWT_32BIT((x) >> 32))
 
 
-#define CONST_N     7
-#define CONST_T     3
+#define SEMIHONEST  0
+#define MALICIOUS   1
+
+#define ADVERSARY   MALICIOUS
+
+#define CONST_N     4
+#define CONST_T     1
 
 #define TAU         (BINOMIAL_TABLE(CONST_N, CONST_T))
 #define TAU_i       (BINOMIAL_TABLE(CONST_N - 1, CONST_T))
 
-#define LAMBDA      NBITS_FIELD
-#define PRF_BYTES   ((LAMBDA)/8)
+#define MUL_FACTOR  NBITS_FIELD
+#define LAMBDA      (NBITS_FIELD/MUL_FACTOR)
+#define PRF_BYTES   ((LAMBDA+7)/8)
 
 uint32_t binom_table[CONST_N + 1][CONST_N + 1] = {0};
 
@@ -231,7 +237,7 @@ void print_T(const share_T T){
 
 
 // Convert share from binary format to integer format
-static inline void ind_to_com_T(const ind_T* T_ind, com_T* T_com){
+void ind_to_com_T(const ind_T* T_ind, com_T* T_com){
     unsigned int j = CONST_T - 1;
     ind_T T_ind_t = *T_ind;
 
@@ -245,7 +251,7 @@ static inline void ind_to_com_T(const ind_T* T_ind, com_T* T_com){
 }
 
 // Convert share from index format to integer format
-static inline void com_to_ind_T(const com_T* T_com, ind_T* T_ind){
+void com_to_ind_T(const com_T* T_com, ind_T* T_ind){
     *T_ind = 0;
     for(int i = 0; i < CONST_T; i++)
         *T_ind += binomial((*T_com)[i], i + 1);
@@ -253,7 +259,7 @@ static inline void com_to_ind_T(const com_T* T_com, ind_T* T_ind){
 
 
 // Convert share from binary format to index format
-static inline void bin_to_com_T(const bin_T* T_bin, com_T* T_com){
+void bin_to_com_T(const bin_T* T_bin, com_T* T_com){
     unsigned int j = 0;
     bin_T T_bin_t = *T_bin;
     for(int i = 0; i < CONST_N; i++){
@@ -266,7 +272,7 @@ static inline void bin_to_com_T(const bin_T* T_bin, com_T* T_com){
 }
 
 // Convert share from index format to binary format
-static inline void com_to_bin_T(const com_T* T_com, bin_T* T_bin){
+void com_to_bin_T(const com_T* T_com, bin_T* T_bin){
     *T_bin = 0;
     for(int i = 0; i < CONST_T; i++)
         *T_bin |= (1 << (*T_com)[i]);
@@ -275,14 +281,14 @@ static inline void com_to_bin_T(const com_T* T_com, bin_T* T_bin){
 
 
 // Convert share from binary format to integer format
-static inline void bin_to_ind_T(const bin_T* T_bin, ind_T* T_ind){
+void bin_to_ind_T(const bin_T* T_bin, ind_T* T_ind){
     com_T T_com;
     bin_to_com_T(T_bin, &T_com);
     com_to_ind_T(&T_com, T_ind);
 }
 
 // Convert share from int format to binary format
-static inline void ind_to_bin_T(const ind_T* T_ind, bin_T* T_bin)
+void ind_to_bin_T(const ind_T* T_ind, bin_T* T_bin)
 {
     com_T T_com[1] = {0};
     ind_to_com_T(T_ind, T_com);
@@ -294,7 +300,7 @@ static inline void ind_to_bin_T(const ind_T* T_ind, bin_T* T_bin)
 
 
 
-static inline void next_T(share_T* T)
+void next_T(share_T* T)
 {
     (T->ind)++;
     if((T->ind) != TAU){
@@ -519,53 +525,27 @@ void mul_RSS_DRSS(const RSS_i a, const RSS_i b, DRSS_i c){
 
 
 
-unsigned char DRSS_reconstruct(const DRSS_i* x_i, DRSS x){
-    unsigned char all_tests = 0, flag = 0;
-    ind_T Ti_inds[CONST_N] = {0};
-    share_T T0, T1;
-    f_elm_t t0;
-
-    for(T0 = T_0; T0.ind < TAU; next_T(&T0)){
-    for(T1 = T_0; T1.ind < TAU; next_T(&T1)){
-        flag = 0;
-
-        for(int i = CONST_N - 1; i >= 0; i--){
-            if(i_hold_T(i, T0.bin | T1.bin)){
-                if(!flag){
-                    f_copy(x_i[i][Ti_inds[i]], t0);
-                    flag = 1;
-                }
-                all_tests |= f_eq(t0, x_i[i][Ti_inds[i]]);
-                f_add(x[T0.ind * TAU + T1.ind], x_i[i][Ti_inds[i]++], x[T0.ind * TAU + T1.ind]);
-            }
-        }
-    }}
-    return all_tests;
-}
-
+// Distribute a RSS x to CONST_N parties
+// Each party recieves x_i[i] shares
 void distribute_RSS(const RSS x, RSS_i* x_i){
-    share_T T, Ti;
+    ind_T Ti_inds[CONST_N] = {0};
 
-    for(T = T_0; T.ind < TAU; next_T(&T)){
+    for(share_T T = T_0; T.ind < TAU; next_T(&T)){
         for(int i = 0; i < CONST_N; i++){
             if(i_hold_T(i, T.bin)){
-                Ti.bin = REMOVE_BIT(T.bin, i);
-                update_T(&Ti, "bin");
-                f_copy(x[T.ind], x_i[i][Ti.ind]);
+                f_copy(x[T.ind], x_i[i][Ti_inds[i]++]);
             }
         }
     }
 }
 
-
 // Reconstructs a RSS x from party shares x_i.
 // Returns 0 if it is well formed, 0xFF otherwise
-unsigned char RSS_reconstruct(const RSS_i* x_i, RSS x){
+unsigned char reconstruct_RSS(const RSS_i* x_i, RSS x){
     unsigned char all_tests = 0, flag = 0;
     ind_T Ti_inds[CONST_N] = {0};
-    share_T T;
 
-    for(T = T_0; T.ind < TAU; next_T(&T)){
+    for(share_T T = T_0; T.ind < TAU; next_T(&T)){
         flag = 0;
 
         for(int i = CONST_N - 1; i >= 0; i--){
@@ -580,6 +560,46 @@ unsigned char RSS_reconstruct(const RSS_i* x_i, RSS x){
     }
     return all_tests;
 }
+
+
+// Distribute a DRSS x to CONST_N parties
+// Each party recieves x_i[i] shares
+void distribute_DRSS(const DRSS x, DRSS_i* x_i){
+    ind_T Ti_inds[CONST_N] = {0};
+
+    for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
+    for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
+        for(int i = 0; i < CONST_N; i++){
+            if(i_hold_T(i, (T0.bin | T1.bin))){
+                f_copy(x[T0.ind * TAU + T1.ind], x_i[i][Ti_inds[i]++]);
+            }
+        }
+    }}
+}
+
+// Reconstructs a DRSS x from party shares x_i.
+// Returns 0 if it is well formed, 0xFF otherwise
+unsigned char reconstruct_DRSS(const DRSS_i* x_i, DRSS x){
+    unsigned char all_tests = 0, flag = 0;
+    ind_T Ti_inds[CONST_N] = {0};
+
+    for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
+    for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
+        flag = 0;
+
+        for(int i = CONST_N - 1; i >= 0; i--){
+            if(i_hold_T(i, (T0.bin | T1.bin))){
+                if(!flag){
+                    f_copy(x_i[i][Ti_inds[i]], x[T0.ind * TAU + T1.ind]);
+                    flag = 1;
+                }
+                all_tests |= f_eq(x[T0.ind * TAU + T1.ind], x_i[i][Ti_inds[i]++]);
+            }
+        }
+    }}
+    return all_tests;
+}
+
 
 // Returns 0 if the RSS shares x_i are well formed, 0xFF otherwise
 unsigned char RSS_well_formed(const RSS_i* x_i){
@@ -712,8 +732,8 @@ void calc_symbols(f_elm_t o[LAMBDA], unsigned char LOPRF[PRF_BYTES]){
 
 
 
+// SEMI-HONEST PROTOCOL
 unsigned char sh_protocol(){
-    // SEMI - HONEST - PROTOCOL
 
     // SERVER PRECOMPUTATION
     f_elm_t k[LAMBDA];
@@ -769,23 +789,21 @@ unsigned char sh_protocol(){
 
 
 
-void sh_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LAMBDA], const ASS_i r_i[LAMBDA], ASS_i o_i[LAMBDA]){
-
-void mal_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LAMBDA], const DRSS_i r_i[LAMBDA], ASS_i t_a[LAMBDA][TAU_i * TAU_i], ASS_i t_a[LAMBDA][TAU_i * TAU_i], ASS_i t_a[LAMBDA][TAU_i * TAU_i]){
-
-
-}
 
 
 
-// SEMI-HONEST PROTOCOLS
-void mal_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][LAMBDA], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA]){
+// MALICIOUS PROTOCOLS
+
+// MALICIOUS SETUP
+void mal_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], DRSS_i r_i[CONST_N][LAMBDA], ASS_i ta_i[CONST_N][LAMBDA][TAU_i * TAU_i], ASS_i tb_i[CONST_N][LAMBDA][TAU_i * TAU_i], ASS_i tr_i[CONST_N][LAMBDA][TAU_i * TAU_i], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA]){
+    
     RSS K, S2;
     RSS_i temp_k_i[LAMBDA][CONST_N], temp_s2_i[LAMBDA][CONST_N];
-    ASS temp_r_i[LAMBDA];
-
-    ASS temp_t;
-
+    DRSS temp_r[LAMBDA];
+    ASS temp_ta;
+    ASS temp_tb;
+    ASS temp_tr;
+    
     for(int j = 0; j < LAMBDA; j++){
         to_RSS(k[j], K);
         distribute_RSS(K, temp_k_i[j]);
@@ -794,9 +812,10 @@ void mal_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][L
         to_RSS(s2[j], S2);
         distribute_RSS(S2, temp_s2_i[j]);
 
-        ASS_zero(temp_r_i[j], CONST_N);
+        DRSS_zero(temp_r[j]);
     }
 
+    
     for(int i = 0; i < CONST_N; i++){
     for(int j = 0; j < LAMBDA; j++){
     for(int T = 0; T < TAU_i; T++){
@@ -805,19 +824,138 @@ void mal_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][L
     }}}
 
 
+
+
+    for(int j = 0; j < LAMBDA; j++){
+    ind_T Ti_inds[CONST_N] = {0};
     for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
     for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
-        ASS_zero(temp_t, S_TT(T0, T1));
+        ASS_zero(temp_ta, S_TT(T0, T1));
+        ASS_zero(temp_tb, S_TT(T0, T1));
+        ASS_zero(temp_tr, S_TT(T0, T1));
+        int l = 0;
+        for(int i = 0; i < CONST_N; i++){
+            if(i_hold_T(i, (T0.bin | T1.bin))){
+                f_copy(temp_ta[l], ta_i[i][j][Ti_inds[i]][0]);
+                f_copy(temp_tb[l], tb_i[i][j][Ti_inds[i]][0]);
+                f_copy(temp_tr[l], tr_i[i][j][Ti_inds[i]][0]);
+                f_copy(temp_r[j][T0.ind * TAU + T1.ind], r_i[i][j][Ti_inds[i]]);
+                Ti_inds[i]++; l++;
+            }
+        }
+    }}}
+}
 
-    }}
+// MALICIOUS SETUP
+void mal_setup_loc(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], DRSS_i r_i[LAMBDA], ASS_i ta_i[LAMBDA][TAU_i * TAU_i], ASS_i tb_i[LAMBDA][TAU_i * TAU_i], ASS_i tr_i[LAMBDA][TAU_i * TAU_i], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA]){
+    
+    RSS K, S2;
+    RSS_i temp_k_i[LAMBDA][CONST_N], temp_s2_i[LAMBDA][CONST_N];
+    DRSS temp_r[LAMBDA];
+    ASS temp_ta;
+    ASS temp_tb;
+    ASS temp_tr;
+    
+    for(int j = 0; j < LAMBDA; j++){
+        to_RSS(k[j], K);
+        distribute_RSS(K, temp_k_i[j]);
+
+        f_rand(s2[j]);
+        to_RSS(s2[j], S2);
+        distribute_RSS(S2, temp_s2_i[j]);
+
+        DRSS_zero(temp_r[j]);
+    }
+
+    
+    for(int i = 0; i < CONST_N; i++){
+    for(int j = 0; j < LAMBDA; j++){
+    for(int T = 0; T < TAU_i; T++){
+        f_copy(temp_k_i[j][i][T], k_i[i][j][T]);
+        f_copy(temp_s2_i[j][i][T], s2_i[i][j][T]);
+    }}}
+
+
+
+
+    for(int j = 0; j < LAMBDA; j++){
+    ind_T Ti_inds[CONST_N] = {0};
+    for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
+    for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
+        ASS_zero(temp_ta, S_TT(T0, T1));
+        ASS_zero(temp_tb, S_TT(T0, T1));
+        ASS_zero(temp_tr, S_TT(T0, T1));
+        int l = 0;
+        for(int i = 0; i < CONST_N; i++){
+            if(i_hold_T(i, (T0.bin | T1.bin))){
+                f_copy(temp_ta[l], ta_i[j][Ti_inds[i]][0]);
+                f_copy(temp_tb[l], tb_i[j][Ti_inds[i]][0]);
+                f_copy(temp_tr[l], tr_i[j][Ti_inds[i]][0]);
+                f_copy(temp_r[j][T0.ind * TAU + T1.ind], r_i[j][Ti_inds[i]]);
+                Ti_inds[i]++; l++;
+            }
+        }
+    }}}
+}
+
+
+// MALICIOUS EVALUATION
+void mal_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LAMBDA], const DRSS_i r_i[LAMBDA], const ASS_i t_ai[LAMBDA][TAU_i * TAU_i], const ASS_i t_bi[LAMBDA][TAU_i * TAU_i], const ASS_i t_ri[LAMBDA][TAU_i * TAU_i], DRSS_i o_i[LAMBDA]){
+    RSS_i a_i;
+    f_elm_t t0, t1;
+    
+    for(int j = 0; j < LAMBDA; j++){
+        add_RSS_i(x_i, k_i[j], a_i);
+
+        for(share_T T0 = T_0; T0.ind < TAU_i; next_T(&T0)){
+        for(share_T T1 = T_0; T1.ind < TAU_i; next_T(&T1)){
+
+            f_mul(a_i[T0.ind], s2_i[j][T1.ind], t0);
+            f_add(t0, r_i[j][T0.ind * TAU_i + T1.ind], t0);
+
+            f_mul(a_i[T0.ind], t_ai[j][T0.ind * TAU_i + T1.ind][0], t1);
+            f_add(t0, t1, t0);
+
+            f_mul(s2_i[j][T1.ind], t_bi[j][T0.ind * TAU_i + T1.ind][0], t1);
+            f_add(t0, t1, t0);
+
+            f_add(t0, t_ri[j][T0.ind * TAU_i + T1.ind][0], t0);
+
+            f_copy(t0, o_i[j][T0.ind * TAU_i + T1.ind]);
+        }}
+    }
+
 }
 
 
 
+void mal_reconstruction(const DRSS_i o_i[CONST_N][LAMBDA], f_elm_t o[LAMBDA]){
+
+    for(int j = 0; j < LAMBDA; j++){
+        ind_T Ti_inds[CONST_N] = {0};
+        f_elm_t v = {0};
+
+        for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
+        for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
+            f_elm_t v_TT = {0};
+
+            for(int i = 0; i < CONST_N; i++){
+                if(i_hold_T(i, (T0.bin | T1.bin))){
+                    f_add(v_TT, o_i[i][j][Ti_inds[i]++], v_TT);
+                }            
+            }
+            f_mul(v_TT, f_inverses[S_TT(T0, T1)], v_TT);
+            f_add(v, v_TT, v);  
+        }}
+        f_copy(v, o[j]);
+    }
+
+}
 
 
+
+// MALICIOUS - PROTOCOL
 unsigned char mal_protocol(){
-    // SEMI - HONEST - PROTOCOL
 
     // SERVER PRECOMPUTATION
     f_elm_t k[LAMBDA];
@@ -825,17 +963,16 @@ unsigned char mal_protocol(){
 
     f_elm_t s2[LAMBDA];
     RSS_i s2_i[CONST_N][LAMBDA];
-    ASS_i r_i[CONST_N][LAMBDA];
     
-    ASS_i t_a[CONST_N][LAMBDA][TAU_i * TAU_i];
-    ASS_i t_b[CONST_N][LAMBDA][TAU_i * TAU_i];
-    ASS_i t_r[CONST_N][LAMBDA][TAU_i * TAU_i];
+    DRSS_i r_i[CONST_N][LAMBDA];
+    ASS_i ta_i[CONST_N][LAMBDA][TAU_i * TAU_i];
+    ASS_i tb_i[CONST_N][LAMBDA][TAU_i * TAU_i];
+    ASS_i tr_i[CONST_N][LAMBDA][TAU_i * TAU_i];
 
     for(int j = 0; j < LAMBDA; j++)
         f_rand(k[j]);
 
-    mal_setup(k, s2, r_i, k_i, s2_i);
-
+    mal_setup(k, s2, r_i, ta_i, tb_i, tr_i, k_i, s2_i);
 
 
     // CLIENT INPUT STAGE
@@ -845,17 +982,17 @@ unsigned char mal_protocol(){
     f_rand(x);
     input(x, x_i);
 
-
+    
     // SERVERS EVALUATION STAGE
-    ASS_i o_i[CONST_N][LAMBDA];
+    DRSS_i o_i[CONST_N][LAMBDA];
 
     for(int i = 0; i < CONST_N; i++)
-        sh_evaluation(x_i[i], k_i[i], s2_i[i], r_i[i], o_i[i]);
+        mal_evaluation(x_i[i], k_i[i], s2_i[i], r_i[i], ta_i[i], tb_i[i], tr_i[i], o_i[i]);
 
- 
-    // CLIENT RECONSTRUCTION STAGE
+     
+    // // CLIENT RECONSTRUCTION STAGE
     f_elm_t o[LAMBDA];
-    sh_reconstruction(o_i, o);
+    mal_reconstruction(o_i, o);
 
 
     unsigned char test = 0;
@@ -877,7 +1014,7 @@ unsigned char mal_protocol(){
 
 
 
-static inline void bench_fun(int function_selector, const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][LAMBDA], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA], ASS_i o_i[CONST_N][LAMBDA], const f_elm_t x, RSS_i x_i[CONST_N], f_elm_t o[LAMBDA], unsigned char L[PRF_BYTES], int i){
+void bench_sh(int function_selector, const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][LAMBDA], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA], ASS_i o_i[CONST_N][LAMBDA], const f_elm_t x, RSS_i x_i[CONST_N], f_elm_t o[LAMBDA], unsigned char L[PRF_BYTES], int i){
     switch (function_selector) {
         case 0:
             sh_setup(k, s2, r_i, k_i, s2_i);
@@ -892,6 +1029,32 @@ static inline void bench_fun(int function_selector, const f_elm_t k[LAMBDA], f_e
             sh_reconstruction(o_i, o);
             break;
         case 4:
+            calc_symbols(o, L);
+            break;
+        default:
+            printf("Invalid function_selector. Please choose 1 for sh_setup, 2 for sh_input, 3 for sh_evaluation, 4 for sh_reconstruction.\n");
+    }
+}
+
+
+// void bench_mal(int function_selector, const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], DRSS_i r_i[CONST_N][LAMBDA], ASS_i ta_i[CONST_N][LAMBDA][TAU_i * TAU_i], ASS_i tb_i[CONST_N][LAMBDA][TAU_i * TAU_i], ASS_i tr_i[CONST_N][LAMBDA][TAU_i * TAU_i], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA], DRSS_i o_i[CONST_N][LAMBDA], const f_elm_t x, RSS_i x_i[CONST_N], f_elm_t o[LAMBDA], unsigned char L[PRF_BYTES], int i){
+void bench_mal(int function_selector, const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], DRSS_i r_i[LAMBDA], ASS_i ta_i[LAMBDA][TAU_i * TAU_i], ASS_i tb_i[LAMBDA][TAU_i * TAU_i], ASS_i tr_i[LAMBDA][TAU_i * TAU_i], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA], DRSS_i o_i[CONST_N][LAMBDA], const f_elm_t x, RSS_i x_i[CONST_N], f_elm_t o[LAMBDA], unsigned char L[PRF_BYTES], int i){
+    switch (function_selector) {
+        case 5:
+            // mal_setup(k, s2, r_i, ta_i, tb_i, tr_i, k_i, s2_i);
+            mal_setup_loc(k, s2, r_i, ta_i, tb_i, tr_i, k_i, s2_i);
+            break;
+        case 6:
+            input(x, x_i);
+            break;
+        case 7:
+            mal_evaluation(x_i[i % CONST_N], k_i[i % CONST_N], s2_i[i % CONST_N], r_i, ta_i, tb_i, tr_i, o_i[i % CONST_N]);
+            // mal_evaluation(x_i[i % CONST_N], k_i[i % CONST_N], s2_i[i % CONST_N], r_i[i % CONST_N], ta_i[i % CONST_N], tb_i[i % CONST_N], tr_i[i % CONST_N], o_i[i % CONST_N]);
+            break;
+        case 8:
+            mal_reconstruction(o_i, o);
+            break;
+        case 9:
             calc_symbols(o, L);
             break;
         default:
@@ -916,90 +1079,116 @@ int main(int argc, char* argv[]){
     "sh_input runs in .........................", \
     "sh_evaluation runs in ....................", \
     "sh_reconstruction runs in ................", \
+    "calc_symbols runs in .....................", \
+    "mal_setup runs in ........................", \
+    "mal_input runs in ........................", \
+    "mal_evaluation runs in ...................", \
+    "mal_reconstruction runs in ...............", \
     "calc_symbols runs in ....................."};
-
-
-    sh_protocol();
-
+    
 
 
     // BENCHMARKING
-    printf("%d bits\n\n", NBITS_FIELD);
     uint64_t nsecs_pre, nsecs_post, nsecs;
 
 
-    f_elm_t k[LAMBDA];
-    RSS_i k_i[CONST_N][LAMBDA];
-
-    f_elm_t s2[LAMBDA];
-    RSS_i s2_i[CONST_N][LAMBDA];
-    ASS_i r_i[CONST_N][LAMBDA];
-
-    f_elm_t x;
-    RSS_i x_i[CONST_N];
-
-    ASS_i o_i[CONST_N][LAMBDA];
-
-    f_elm_t o[LAMBDA];
-
-    unsigned char LOPRF[PRF_BYTES];
-
-    for(int j = 0; j < LAMBDA; j++){
-        f_rand(k[j]);
-        f_rand(x);
-    }
-    #define LOOPS       (BENCH_LOOPS/10)
-
-    for(int function_selector = 0; function_selector < 5; function_selector++){
-        nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
-
-        nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-        for(int i = 0; i < LOOPS; i++)
-            bench_fun(function_selector, k, s2, r_i, k_i, s2_i, o_i, x, x_i, o, LOPRF, i);
-        nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
-        nsecs += (nsecs_post-nsecs_pre);
-        
-        // printf("%s check   .........................        %s\n", "sh_protocol ", pass_check(&0, 1));
-        // printf("%s %9s us\n", function_names[function_selector], print_num((double)(nsecs/(LOOPS))));
-        printf("%s %13s ns\n", function_names[function_selector], print_num((double)((uint64_t)(nsecs/(LOOPS)))));
-        printf("\n");
-    }
 
 
+    #define LOOPS       (50)
+
+    #if (ADVERSARY==SEMIHONEST)
+
+        f_elm_t k[LAMBDA];
+        RSS_i k_i[CONST_N][LAMBDA];
+
+        f_elm_t s2[LAMBDA];
+        RSS_i s2_i[CONST_N][LAMBDA];
+
+        ASS_i r_i[CONST_N][LAMBDA];
+
+        f_elm_t x;
+        RSS_i x_i[CONST_N];
+
+        ASS_i o_i[CONST_N][LAMBDA];
+
+        f_elm_t o[LAMBDA];
+        unsigned char LOPRF[PRF_BYTES];
+
+        int test = 0; //sh_protocol();
+
+        printf("%3d bits, Semi-honest                                     %s\n\n", NBITS_FIELD, PASS(test));
+        // printf("Semi-honest                                               %s\n", PASS(tsh));
+        for(int function_selector = 0; function_selector < 5; function_selector++){
+            nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
+
+            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+            for(int i = 0; i < LOOPS; i++)
+                bench_sh(function_selector, k, s2, r_i, k_i, s2_i, o_i, x, x_i, o, LOPRF, i);
+            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+            nsecs += (nsecs_post-nsecs_pre);
+            
+            printf("%s %13s ns\n", function_names[function_selector], print_num((double)((uint64_t)(nsecs/(LOOPS)))));
+        }
 
 
+    #elif(ADVERSARY==MALICIOUS)
 
-    // nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
+        f_elm_t k[LAMBDA];
+        RSS_i k_i[CONST_N][LAMBDA];
 
-    // nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-    // for(int i = 0; i < BENCH_LOOPS/10; i++)
-    //     mul_RSS_ASS(X_i[i % CONST_N], Y_i[i % CONST_N], AZ_i[i % CONST_N]);
-    
-    // nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
-    // nsecs += (nsecs_post-nsecs_pre);
-    
-    // printf("%s check   .........................        %s\n", "mul_RSS_ASS ", pass_check(test + 1, 1));
-    // printf("%s runs in ......................... %9s ns\n", "mul_RSS_ASS ", print_num((double)(nsecs/(BENCH_LOOPS/10))));
-    // printf("\n");
+        f_elm_t s2[LAMBDA];
+        RSS_i s2_i[CONST_N][LAMBDA];
+
+        // Removed to benchmark only local operations.
+        // Uncomment to consider the "global" view which controlls all secret shares.
+        // Then change the bench_mal cases 5 and 7 correspondingly, and change the variable types for bench_mal arguments
+        // DRSS_i  r_i[CONST_N][LAMBDA];
+        // ASS_i   ta_i[CONST_N][LAMBDA][TAU_i * TAU_i];
+        // ASS_i   tb_i[CONST_N][LAMBDA][TAU_i * TAU_i];
+        // ASS_i   tr_i[CONST_N][LAMBDA][TAU_i * TAU_i];
+
+        DRSS_i  r_i[LAMBDA];
+        ASS_i   ta_i[LAMBDA][TAU_i * TAU_i];
+        ASS_i   tb_i[LAMBDA][TAU_i * TAU_i];
+        ASS_i   tr_i[LAMBDA][TAU_i * TAU_i];
+
+        f_elm_t x;
+        RSS_i x_i[CONST_N];
+  
+        DRSS_i o_i[CONST_N][LAMBDA];
+        f_elm_t o[LAMBDA];
+        unsigned char LOPRF[PRF_BYTES];
+
+        // int test = mal_protocol();
+        int test = 0;
+
+        for(int j = 0; j < LAMBDA; j++){
+            f_rand(k[j]);
+            f_rand(x);
+        }
 
 
+        printf("%3d bits, Malicious                                       %s\n\n", NBITS_FIELD, PASS(test));
+
+        // printf("\nMalicious                                                 %s\n", PASS(tmal));
+        for(int function_selector = 5; function_selector < 10; function_selector++){
+            nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
+
+            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+            for(int i = 0; i < LOOPS; i++)
+                bench_mal(function_selector, k, s2, r_i, ta_i, tb_i, tr_i, k_i, s2_i, o_i, x, x_i, o, LOPRF, i);
+            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+            nsecs += (nsecs_post-nsecs_pre);
+
+            printf("%s %13s ns\n", function_names[function_selector], print_num((double)((uint64_t)(nsecs/(LOOPS)))));
+        }
+
+    #endif
 
 
-    // nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
-
-    // nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-    // for(int i = 0; i < BENCH_LOOPS/10; i++)
-    //     mul_RSS_DRSS(X_i[i % CONST_N], Y_i[i % CONST_N], DZ_i[i % CONST_N]);
-    
-    // nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
-    // nsecs += (nsecs_post-nsecs_pre);
-    
-    // printf("%s check  .........................        %s\n", "mul_RSS_DRSS ", pass_check(test + 2, 1));
-    // printf("%s runs in ......................... %9s ns\n", "mul_RSS_DRSS", print_num((double)(nsecs/(BENCH_LOOPS/10))));
+    printf("...........................................................\n\n");
 
 
-
-    // printf("\n");
 
     return 0;
 }

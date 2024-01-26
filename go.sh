@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 TARGET="dOPRF"
-BITSIZES=("64" "128" "192" "256" "512")
+BITSIZES=("128" "192" "256")
 FAST="GENERIC"
 
 for arg in "$@"
@@ -27,12 +27,9 @@ make clean > /dev/null
 for BITSIZE in "${BITSIZES[@]}"
 do
     make ${TARGET}${BITSIZE} OPT_LEVEL=${FAST} > /dev/null
-done
-for BITSIZE in "${BITSIZES[@]}"
-do
     ./${TARGET}${BITSIZE}
+    make clean > /dev/null
 done
 
 
-make clean > /dev/null
 

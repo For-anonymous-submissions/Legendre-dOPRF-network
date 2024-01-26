@@ -30,9 +30,16 @@ By running `make dOPRF64` you will only compile the 64 bit prime arithmetic (and
 
 By running `make dOPRF64 OPT_LEVEL=FAST` you will compile ARM64 assembly code which is optimised. It speeds up the multiplications, modular reduction, etc. For other prime sizes use `main128`, etc. respectively. Currently assembly is only implemented for 64 and 128 bits. (Some functions are faster without the "FAST" flag due to the compiler unwrapping some loops and speeding up some functions, which it doesn't do when compiling assembly. This only happens for cryptographically irrelevant sized primes (64) due to cache being large enough to allow the compiler to do this speedup.)
 
+---
 
+\lambda is set to 1 by default
+Change the dOPRF.c macro LAMBDA to change the lambda value
 
+The parameters n and t are 4 and 1 by default.
+Change the dOPRF.c macros CONST_N and CONST_T to change the n and t values.
 
+The adversary is malicious by default
+Change the dOPRF.c macro ADVERSARY to SEMIHONEST to change the adversarial type
 
 ---
 
