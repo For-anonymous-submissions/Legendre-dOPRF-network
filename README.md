@@ -2,7 +2,8 @@
 An ARM64 arithmetic library and the Legendre PRF based distributed OPRF
 
 
-EASIEST WAY TO RUN
+Simplest way to run the experiments:
+--
 
 You can do all benchmarks by giving execution priviledges to the script `go.sh` 
 `chmod +x go.sh`
