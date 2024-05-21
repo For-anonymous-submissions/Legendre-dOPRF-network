@@ -21,7 +21,7 @@ const char* print_num(double a){
     memset(t, 0, sizeof(t)); 
     int len;
 
-    sprintf(t, "%" PRIu64, (uint64_t)a);
+    snprintf(t, 256, "%" PRIu64, (uint64_t)a);
     len = strlen(t);
 
     int j = 0;
