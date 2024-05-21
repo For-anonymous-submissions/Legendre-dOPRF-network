@@ -10,9 +10,9 @@ You can do all benchmarks by giving execution priviledges to the script `go.sh`
 
 This script cleans, compiles and runs the program. Make sure execution priviledges are provided for the directory. 
 
-`./go.sh` Makes all prime sizes and runs benchmarks Legendre dOPRF
+`./go.sh` Makes prime sizes 128, 192 and 256 bits, and runs benchmarks Legendre dOPRF
 
-`./go.sh FAST` Makes all prime sizes with ARM64 assebly, and runs all tests and benchmark 
+`./go.sh FAST` Makes prime sizes 128, 192 and 256 bits with ARM64 assebly, and runs all tests and benchmark 
 
 `./go.sh X` Makes X bit prime dOPRF, runs all tests and benchmark
 
@@ -25,7 +25,7 @@ This script cleans, compiles and runs the program. Make sure execution priviledg
 ---
 
 
-Run `make` which will compile arithmetic tests and benchmarks for 64,128,192,256,512 bit sized prime fields, as well as the benchmarks for the Legendre dOPRF. The executables are arith64, arith128, arith192, arith256, arith512 for arithmetic tests and benchmarks, and dOPRF64, dOPRF128, dOPRF192, dOPRF256, dOPRF512 for the Legendre dOPRF.
+Run `make` which will compile arithmetic tests and benchmarks for 64, 128, 192, 256, 512 bit sized prime fields, as well as the benchmarks for the Legendre dOPRF. The executables are arith64, arith128, arith192, arith256, arith512 for arithmetic tests and benchmarks, and dOPRF64, dOPRF128, dOPRF192, dOPRF256, dOPRF512 for the Legendre dOPRF.
 
 By running `make dOPRF64` you will only compile the 64 bit prime arithmetic (and respectively for 128, 192, 256, 512)
 
@@ -33,7 +33,7 @@ By running `make dOPRF64 OPT_LEVEL=FAST` you will compile ARM64 assembly code wh
 
 ---
 
-Lambda is set to 1 by default.
+Lambda is set to NBITS_PRIME/2 by default.
 Change the macro LAMBDA in the dOPRF.c file to change the lambda value.
 
 The parameters n and t are 4 and 1 by default.
