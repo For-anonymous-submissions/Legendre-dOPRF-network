@@ -41,43 +41,44 @@ endif
 
 .PHONY: all dOPRF arith clean
 
-all: dOPRF arith
+all: dOPRF
+#  arith
 
 
-dOPRF: dOPRF64
+dOPRF: dOPRF128 dOPRF256 dOPRF512
+
+#dOPRF64
 
 # dOPRF128 dOPRF192 dOPRF256 dOPRF512
 
 
 clean:
-	rm -f dOPRF64 
-	
-# dOPRF128 dOPRF192 dOPRF256 dOPRF512 arith64 arith128 arith192 arith256 arith512
+	rm -f dOPRF64 dOPRF128 dOPRF192 dOPRF256 dOPRF512 arith64 arith128 arith192 arith256 arith512
 
 
-arith: arith64
+# arith: arith64
 
 # arith128 arith192 arith256 arith512
 
 
-dOPRF64: main.c $(SRC64) dOPRF.c
-	$(CC) $(CFLAGS)   -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+# dOPRF64: main.c $(SRC64) dOPRF.c
+# $(CC) $(CFLAGS)   -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# dOPRF128: main.c $(SRC128) dOPRF.c
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^
+dOPRF128: main.c $(SRC128) dOPRF.c
+	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
 # dOPRF192: main.c $(SRC192) dOPRF.c
 # 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=2 -DPRIMES=$(PRIMES_VAL) -o $@ $^
 
-# dOPRF256: main.c $(SRC256) dOPRF.c
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^
+dOPRF256: main.c $(SRC256) dOPRF.c
+	$(CC) $(CFLAGS)  -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# dOPRF512: main.c $(SRC512) dOPRF.c
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^
+dOPRF512: main.c $(SRC512) dOPRF.c
+	$(CC) $(CFLAGS)  -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
 
-arith64: arith_tests.c $(SRC64)
-	$(CC) $(CFLAGS)  -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+# arith64: arith_tests.c $(SRC64)
+# 	$(CC) $(CFLAGS)  -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
 # arith128: arith_tests.c $(SRC128)
 # 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^
@@ -92,8 +93,8 @@ arith64: arith_tests.c $(SRC64)
 # 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^
 
 
-clean:
-	rm -f dOPRF64 arith64
+# clean:
+# 	rm -f dOPRF64 arith64
 	
 # dOPRF192 dOPRF256 dOPRF512 arith64 arith128 arith192 arith256 arith512
 
