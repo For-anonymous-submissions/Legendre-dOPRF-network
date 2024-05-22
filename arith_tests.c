@@ -107,7 +107,7 @@ int main(int argc, char* argv[]){
 
 
     // Randomness seed for replicating experiments
-    pnrg_seed seed;
+    prng_seed seed;
     randombytes(seed, NBYTES_SEED);     // Comment out if loading seed.
     printf("\n"); print_seed(seed); printf("\n");
 
