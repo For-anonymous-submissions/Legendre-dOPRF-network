@@ -27,6 +27,10 @@
 #define CONST_N 7
 #endif
 
+#define MUL_FACTOR  2
+#define LAMBDA      (NBITS_FIELD/MUL_FACTOR)
+#define PRF_BYTES   ((LAMBDA+7)/8)
+
 #define BINOMIAL_TABLE(i, j)    (\
                                 (i ==  0) ? ((j == 0) ? 1 : (j == 1) ?  0 : (j == 2) ?   0 : (j == 3) ?   0 : (j == 4) ?    0 : (j == 5) ?     0 : (j == 6) ?     0 : (j == 7) ?     0 : (j == 8) ?     0 : (j == 9) ?     0 : (j == 10) ?     0 : (j == 11) ?     0 : (j == 12) ?     0 : (j == 13) ?     0 : (j == 14) ?     0 : (j == 15) ?    0 : (j == 16) ?   0 : (j == 17) ?   0 : (j == 18) ?  0 : (j == 19) ? 0 : -1) :    \
                                 (i ==  1) ? ((j == 0) ? 1 : (j == 1) ?  1 : (j == 2) ?   0 : (j == 3) ?   0 : (j == 4) ?    0 : (j == 5) ?     0 : (j == 6) ?     0 : (j == 7) ?     0 : (j == 8) ?     0 : (j == 9) ?     0 : (j == 10) ?     0 : (j == 11) ?     0 : (j == 12) ?     0 : (j == 13) ?     0 : (j == 14) ?     0 : (j == 15) ?    0 : (j == 16) ?   0 : (j == 17) ?   0 : (j == 18) ?  0 : (j == 19) ? 0 : -1) :    \
@@ -56,9 +60,7 @@
 #define TAU         (BINOMIAL_TABLE(CONST_N, CONST_T))
 #define TAU_i       (BINOMIAL_TABLE(CONST_N - 1, CONST_T))
 
-#define MUL_FACTOR  2
-#define LAMBDA      (NBITS_FIELD/MUL_FACTOR)
-#define PRF_BYTES   ((LAMBDA+7)/8)
+
 
 
 
@@ -620,7 +622,7 @@ unsigned char test_RSS_print(const RSS x, const RSS_i* x_i);
 
 // Maliciously secure RSS to RSS multiplication
 // First stage, multiplying and sharing terms
-void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_i], const DRSS_seed_i seed);
+void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_i], DRSS_seed_i seed);
 // Second stage, receiving and reconstructing output
 int mult_RSS_to_RSS_reconstruction(const RSS_i C_j[CONST_N][TAU_i * TAU_i], RSS_i c);
 

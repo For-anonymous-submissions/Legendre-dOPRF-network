@@ -37,6 +37,9 @@ void init_inverses() {
     }
 }
 
+
+
+
 /////////////////////////////////////////////
 // Printing shares
 /////////////////////////////////////////////
@@ -300,15 +303,9 @@ void to_ASS_urandom(const f_elm_t a, ASS A, const subset_S S){
 void to_ASS_prng(const f_elm_t a, ASS A, const subset_S S, prng_seed seed){
     f_elm_t t0 = {0};
 
-    for(int i = 0; i < S.card - 1; i++){
-        f_rand(A[S.com[i]], seed);
+    f_rand_array(A, CONST_N, seed);
+    for(int i = 0; i < S.card - 1; i++)
         f_add(t0, A[S.com[i]], t0);
-    }
-
-
-    // f_rand_array(A, CONST_N, seed);
-    // for(int i = 0; i < S.card - 1; i++)
-    //     f_add(t0, A[S.com[i]], t0);
 
     f_sub(a, t0, A[S.com[S.card - 1]]);
 }
@@ -1011,7 +1008,7 @@ unsigned char test_RSS_print(const RSS x, const RSS_i x_i[CONST_N]){
 
 
 
-void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_i], const DRSS_seed_i seed){
+void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_i], DRSS_seed_i seed){
     f_elm_t t0;
     prng_seed rss_seed[2];
 
@@ -1024,6 +1021,7 @@ void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_
         memcpy(rss_seed[1], t0,                            NBYTES_SEED);
 
         to_RSS(t0, C[T0.ind * TAU_i + T1.ind], rss_seed, 2);    
+        memcpy(seed[T0.ind * TAU_i + T1.ind], rss_seed[0], NBYTES_SEED);
     }}
 }
 

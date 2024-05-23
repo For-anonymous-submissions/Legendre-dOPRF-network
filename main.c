@@ -8,16 +8,16 @@
 #include "arith.h"
 #include "dOPRF.h"
 
-#define LOOPS       (10)
 
-
-// ONE-TIME-COMPUTATION
-
-// Precomputed constants, filled in at main call
-extern f_elm_t f_inverses[CONST_N + 1];
-
-// Table for holding binomial values, precomputed at main call
-extern uint32_t binom_table[CONST_N + 1][CONST_N + 1];
+#if (ADVERSARY==SEMIHONEST)
+    #define LOOPS       50
+    #define START_FUNC  1
+    #define END_FUNC    8
+#elif(ADVERSARY==MALICIOUS)
+    #define LOOPS       30
+    #define START_FUNC  9
+    #define END_FUNC    16
+#endif
 
 
 
@@ -30,8 +30,11 @@ extern uint32_t binom_table[CONST_N + 1][CONST_N + 1];
 // SEMI-HONEST SUBPROTOCOLS
 /////////////////////////////////////////////
 
+
+
+
 /////////////////////////////////////////////
-// SEMI-HONEST SETUP
+// SEMI-HONEST SETUP (with distributed secret shares of zero)
 /////////////////////////////////////////////
 void sh_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][LAMBDA], RSS_i k_i[CONST_N][LAMBDA], RSS_i s2_i[CONST_N][LAMBDA]){
     RSS K, S2;
@@ -61,14 +64,11 @@ void sh_setup(const f_elm_t k[LAMBDA], f_elm_t s2[LAMBDA], ASS_i r_i[CONST_N][LA
     }}
 }
 
+
 /////////////////////////////////////////////
-// SEMI-HONEST SETUP
+// SEMI-HONEST SETUP (only distribute seeds, parties compute secret shares of zero locally)
 /////////////////////////////////////////////
-void sh_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i[CONST_N], ASS_seed_zero_i aseedz_i[CONST_N])
-{
-
-
-
+void sh_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i[CONST_N], ASS_seed_zero_i aseedz_i[CONST_N]){
     /////////////////////////////////////////////
     // Random RSS key k (LAMBDA many)
     /////////////////////////////////////////////
@@ -91,12 +91,14 @@ void sh_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i[
     /////////////////////////////////////////////
     // Seeds for generating random RSS shares 
     /////////////////////////////////////////////
-    
+    prng_seed newseed;
+    randombytes(newseed, NBYTES_SEED);
+
     // RSS
     RSS_seed (*rseed) = malloc(sizeof(RSS_seed));
     // RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
 
-    random_RSS_seed(*rseed, seed);
+    random_RSS_seed(*rseed, newseed);
     distribute_RSS_seed(*rseed, rseed_i);
 
     /////////////////////////////////////////////
@@ -111,15 +113,109 @@ void sh_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i[
     ASS_seed_zero (*aseedz) = malloc(sizeof(ASS_seed_zero));
     // ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
 
-    random_ASS_seed_zero(*aseedz, seed);
+    random_ASS_seed_zero(*aseedz, newseed);
     distribute_ASS_seed_zero(*aseedz, aseedz_i);
     free(aseedz);
 
     /////////////////////////////////////////////
-
 }
 
 
+/////////////////////////////////////////////
+// SEMI-HONEST ZERO GENERATION
+/////////////////////////////////////////////
+void sh_setup_zeros(const int i, ASS_i az_i[2][LAMBDA], ASS_seed_zero_i aseedz_i){
+    f_elm_t (*az_i_t)  = malloc(sizeof(f_elm_t[2][LAMBDA]));
+    subset_S S = S_N;
+
+    ASS_zero_local_array(S, i, 2*LAMBDA, az_i_t, aseedz_i);
+
+    memcpy(az_i, az_i_t, sizeof(ASS_i[2][LAMBDA]));
+
+    free(az_i_t);
+}
+
+
+/////////////////////////////////////////////
+// First phase - Computing the product
+// Parties compute first part of local RSS->RSS mult and send outputs
+/////////////////////////////////////////////
+void sh_setup_mul_1(const ASS_i az_i[LAMBDA], RSS_i c_i[LAMBDA][CONST_N], RSS_seed_i rseed_i){
+    prng_seed seed;
+    randombytes(seed, NBYTES_SEED);
+
+    RSS (*ct)  = malloc(sizeof(RSS[LAMBDA]));
+    RSS_i (*s) = malloc(sizeof(RSS_i[LAMBDA]));
+    ASS_i (*c) = malloc(sizeof(ASS_i[LAMBDA]));
+
+    random_RSS_local_array(LAMBDA, s, rseed_i);
+
+    for(int j = 0; j < LAMBDA; j++)
+        mul_RSS_ASS(s[j], s[j], c[j]);
+
+    free(s);
+
+    for(int j = 0; j < LAMBDA; j++)
+        f_add(c[j][0], az_i[j][0], c[j][0]);
+
+    for(int j = 0; j < LAMBDA; j++)
+        to_RSS(c[j][0], ct[j], seed);
+
+    free(c);
+
+    for(int j = 0; j < LAMBDA; j++){
+        ind_T T_ind[CONST_N] = {0};
+        for(int i = 0; i < CONST_N; i++){
+            for(share_T T = T_0; T.ind < TAU; next_T(&T)){
+                if(i_hold_T(i, T)){
+                    f_copy(ct[j][T.ind], c_i[j][i][T_ind[i]++]);
+                }
+            }
+        }
+    }
+    free(ct);
+}
+
+
+/////////////////////////////////////////////
+// Re-indexes the outputs so that
+// output of party i is sent to party j 
+// Not needed in real life execution
+// Just in the simulation where we simulate all parties
+/////////////////////////////////////////////
+void sh_setup_reindex_outputs(RSS_i c[CONST_N][LAMBDA][CONST_N]){
+    // f_elm_t c_i[party i that computes output][LAMBDA][party j that receives from i][TAU_i * TAU_i shares of computer][TAU_j * TAU_j shares of receiver]
+    RSS_i (*temp) = malloc(sizeof(RSS_i));
+
+    for(int i = 0; i < CONST_N; i++){
+        for(int l = 0; l < LAMBDA; l++){
+            for(int j = 0; j < i; j++){
+                memcpy(temp,        c[j][l][i], sizeof(RSS_i));
+                memcpy(c[j][l][i],  c[i][l][j], sizeof(RSS_i));
+                memcpy(c[i][l][j],  temp,       sizeof(RSS_i));
+            }
+        }
+    }
+    free(temp);
+}
+
+
+/////////////////////////////////////////////
+// Second phase - reconstructing the product
+// Parties receive outputs and reconstruct the output
+/////////////////////////////////////////////
+void sh_setup_mul_2(const RSS_i c_i[LAMBDA][CONST_N], RSS_i s2_i[LAMBDA]){
+    memset(s2_i, 0, sizeof(RSS_i[LAMBDA]));
+
+    for(int j = 0; j < LAMBDA; j++){
+        for(share_T T = T_0; T.ind < TAU_i; next_T(&T)){
+            f_elm_t t0 = {0};
+            for(int i = 0; i < CONST_N; i++)
+                f_add(c_i[j][i][T.ind], t0, t0);
+            f_copy(t0, s2_i[j][T.ind]);
+        }
+    }
+}
 
 
 /////////////////////////////////////////////
@@ -141,7 +237,6 @@ void sh_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LA
         mul_RSS_ASS(a_i, s2_i[j], o_i[j]);
         f_add(o_i[j][0], az_i[j][0], o_i[j][0]);
     }
-
 }
 
 /////////////////////////////////////////////
@@ -250,17 +345,18 @@ unsigned char sh_protocol_full(prng_seed seed){
     // Generate key
     // Same key as inside sh_tp_setup
     ////////////////////////////////////////////
+
     RSS (*rk_temp) = malloc(sizeof(RSS[LAMBDA]));
     f_elm_t (*k) = malloc(sizeof(f_elm_t[LAMBDA]));
     
     RSS_rand_array(rk_temp, curr_seed);
+
     for(int j = 0; j < LAMBDA; j++)
         open_RSS(rk_temp[j], k[j]);
 
     memcpy(curr_seed, seed, NBYTES_SEED);
     
     ////////////////////////////////////////////
-
     free(rk_temp);
 
     
@@ -281,44 +377,57 @@ unsigned char sh_protocol_full(prng_seed seed){
     // LOCAL SETUP STAGE
     ////////////////////////////////////////////
 
-    ASS_i (*az_i)[LAMBDA]  = malloc(sizeof(ASS_i[CONST_N][LAMBDA]));
-    f_elm_t (*az_i_t)[LAMBDA]  = malloc(sizeof(f_elm_t[CONST_N][LAMBDA]));
-
+    ASS_i (*az_i)[2][LAMBDA]  = malloc(sizeof(ASS_i[CONST_N][2][LAMBDA]));
 
     ////////////////////////////////////////////
     // Compute all secret shares of zero to be used later
     
-    subset_S S = S_N;
-
     for(int i = 0; i < CONST_N; i++)
-        ASS_zero_local_array(S, i, LAMBDA, az_i_t[i], aseedz_i[i]);
+        sh_setup_zeros(i, az_i[i], aseedz_i[i]);
 
-    memcpy(az_i, az_i_t, sizeof(ASS_i[CONST_N][LAMBDA]));
     ////////////////////////////////////////////
     free(aseedz_i);
-    free(az_i_t);
+
 
     ////////////////////////////////////////////
     // First step of RSS multiplication
-    RSS_i (*s2_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
+
+    RSS_i (*c_i)[LAMBDA][CONST_N] = malloc(sizeof(RSS_i[CONST_N][LAMBDA][CONST_N]));
+
+
+    for(int i = 0; i < CONST_N; i++)
+        sh_setup_mul_1(az_i[i][0], c_i[i], rseed_i[i]);
 
     ////////////////////////////////////////////
     free(rseed_i);
 
+
+    ////////////////////////////////////////////
+    // Re-indexing, i.e., sending messages
+    
+    sh_setup_reindex_outputs(c_i);
+
+
     ////////////////////////////////////////////
     // Second step of RSS multiplication
 
+    RSS_i (*s2_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
 
+    for(int i = 0; i < CONST_N; i++)
+        sh_setup_mul_2(c_i[i], s2_i[i]);
 
+    ////////////////////////////////////////////
+    free(c_i);
 
 
     ////////////////////////////////////////////
     // CLIENT INPUT STAGE
     ////////////////////////////////////////////
+
     f_elm_t x;
     RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
 
-    f_rand(x);
+    f_rand(x, seed);
     input(x, x_i, seed);
 
     ////////////////////////////////////////////
@@ -328,10 +437,11 @@ unsigned char sh_protocol_full(prng_seed seed){
     ////////////////////////////////////////////
     // SERVERS EVALUATION STAGE
     ////////////////////////////////////////////
+
     ASS_i (*o_i)[LAMBDA] = malloc(sizeof(ASS_i[CONST_N][LAMBDA]));
 
     for(int i = 0; i < CONST_N; i++)
-        sh_evaluation(x_i[i], k_i[i], s2_i[i], az_i[i], o_i[i]);
+        sh_evaluation(x_i[i], k_i[i], s2_i[i], az_i[i][1], o_i[i]);
 
     ////////////////////////////////////////////
     free(x_i);
@@ -356,25 +466,24 @@ unsigned char sh_protocol_full(prng_seed seed){
     }
 
     ////////////////////////////////////////////
+    free(s2_i_temp);
     free(s2_rss);
     free(s2_i);
-    free(s2_i_temp);
 
 
     ////////////////////////////////////////////
     // CLIENT RECONSTRUCTION STAGE
     ////////////////////////////////////////////
     f_elm_t o[LAMBDA];
-    unsigned char L[PRF_BYTES];
+    unsigned char L[PRF_BYTES] = {0};
 
     sh_reconstruction(o_i, o);
-
-
 
     ////////////////////////////////////////////
     // Client computes Legendre symbols
     
     calc_symbols(o, L);
+
 
     printf("\n");
     printf("Output: "); print_hex(L, PRF_BYTES);
@@ -394,6 +503,10 @@ unsigned char sh_protocol_full(prng_seed seed){
         f_mul(z, s2[j], z);        
         test |= f_neq(z, o[j]);
     }
+
+    ////////////////////////////////////////////
+    free(s2);
+    free(k);
 
     return(test);
 }
@@ -561,12 +674,15 @@ void mal_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i
     /////////////////////////////////////////////
     // Seeds for generating random RSS & DRSS shares 
     /////////////////////////////////////////////
-    
+    // Use a random seed for all random single-use elements
+    prng_seed newseed;
+    randombytes(newseed, NBYTES_SEED);
+
     // RSS
     RSS_seed (*rseed) = malloc(sizeof(RSS_seed));
     // RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
 
-    random_RSS_seed(*rseed, seed);
+    random_RSS_seed(*rseed, newseed);
     distribute_RSS_seed(*rseed, rseed_i);
     free(rseed);
 
@@ -575,7 +691,7 @@ void mal_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i
     DRSS_seed (*dseed) = malloc(sizeof(DRSS_seed));
     // DRSS_seed_i (*dseed_i) = malloc(sizeof(DRSS_seed_i[CONST_N]));
 
-    random_DRSS_seed(*dseed, seed);
+    random_DRSS_seed(*dseed, newseed);
     distribute_DRSS_seed(*dseed, dseed_i);
     free(dseed);
     /////////////////////////////////////////////
@@ -588,7 +704,7 @@ void mal_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i
     ASS_seed_zero (*aseedz) = malloc(sizeof(ASS_seed_zero));
     // ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
 
-    random_ASS_seed_zero(*aseedz, seed);
+    random_ASS_seed_zero(*aseedz, newseed);
     distribute_ASS_seed_zero(*aseedz, aseedz_i);
     free(aseedz);
 
@@ -597,7 +713,7 @@ void mal_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i
     RSS_seed_zero (*rseedz) = malloc(sizeof(RSS_seed_zero));
     // RSS_seed_zero_i (*rseedz_i) = malloc(sizeof(RSS_seed_zero_i[CONST_N]));
 
-    random_RSS_seed_zero(*rseedz, seed);
+    random_RSS_seed_zero(*rseedz, newseed);
     distribute_RSS_seed_zero(*rseedz, rseedz_i);
     free(rseedz);
 
@@ -606,22 +722,11 @@ void mal_tp_setup(prng_seed seed, RSS_i k_i[CONST_N][LAMBDA], RSS_seed_i rseed_i
     DRSS_seed_zero (*dseedz) = malloc(sizeof(DRSS_seed_zero));
     // DRSS_seed_zero_i (*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i[CONST_N]));
 
-    random_DRSS_seed_zero(*dseedz, seed);
+    random_DRSS_seed_zero(*dseedz, newseed);
     distribute_DRSS_seed_zero(*dseedz, dseedz_i);
     free(dseedz);
+
     /////////////////////////////////////////////
-
-
-
-    
-    // free(k_i);
-
-    // free(rseed_i);
-    // free(dseed_i);
-
-    // free(aseedz_i);
-    // free(rseedz_i);
-    // free(dseedz_i);
 }
 
 
@@ -696,7 +801,6 @@ void mal_setup_zeros(const int i, ASS_seed_zero_i aseedz_i, RSS_seed_zero_i rsee
     }}
     /////////////////////////////////////////////
     free(dz_temp);
-
 }
 
 
@@ -1166,8 +1270,6 @@ int mal_protocol_full(prng_seed seed){
     free(dseedz_i);
 
 
-
-    //Change from here: involve network 
     ////////////////////////////////////////////
     // CLIENT INPUT STAGE
     ////////////////////////////////////////////
@@ -1176,6 +1278,7 @@ int mal_protocol_full(prng_seed seed){
 
     f_rand(x, seed);
     input(x, x_i, seed);
+
     ////////////////////////////////////////////
 
 
@@ -1275,6 +1378,7 @@ int mal_protocol_full(prng_seed seed){
 //             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
 //             for(int i = 0; i < LOOPS; i++)
 //                 sh_tp_setup(seed, k_i, rseed_i, aseedz_i);
+//             nsecs_post = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
 //             nsecs = (nsecs_post-nsecs_pre);
 
 //             free(k_i);
@@ -1283,8 +1387,56 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(1): {  // input
-            
+//         case(1): {
+//             ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i));
+//             ASS_i (*az_i)[LAMBDA] = malloc(sizeof(ASS_i[2][LAMBDA]));
+
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_setup_zeros(i % CONST_N, az_i, *aseedz_i);
+//             nsecs_post = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs = (nsecs_post-nsecs_pre);
+
+//             free(az_i);
+//             free(aseedz_i);
+
+//             return nsecs;
+//         }
+//         case(2): {
+
+//             ASS_i (*az_i) = malloc(sizeof(ASS_i[LAMBDA]));
+//             RSS_i (*c_i)[CONST_N] = malloc(sizeof(RSS_i[LAMBDA][CONST_N]));
+//             RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i));
+
+
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_setup_mul_1(az_i, c_i, *rseed_i);
+//             nsecs_post = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs = (nsecs_post-nsecs_pre);
+
+//             free(az_i);
+//             free(c_i);
+//             free(rseed_i);
+
+//             return nsecs;
+//         }
+//         case(3): {
+//             RSS_i (*c_i)[CONST_N] = malloc(sizeof(RSS_i[LAMBDA][CONST_N]));
+//             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
+
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_setup_mul_2(c_i, s2_i);
+//             nsecs_post = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs = (nsecs_post-nsecs_pre);
+
+//             free(c_i);
+//             free(s2_i);
+
+//             return nsecs;
+//         }
+//         case(4): {
 //             f_elm_t x;
 //             RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
 
@@ -1298,18 +1450,21 @@ int mal_protocol_full(prng_seed seed){
 //             free(x_i);
 //             return nsecs;
 //         }
-//         case(2): {  // sh_evaluation
-//             RSS_i x_i;
+//         case(5): {
+//             RSS_i (*x_i) = malloc(sizeof(RSS_i));
 //             RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
 //             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
-//             ASS_i (*az_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             ASS_i (*az_i) = malloc(sizeof(ASS_i[LAMBDA]));
 //             ASS_i (*o_i) = malloc(sizeof(ASS_i[LAMBDA]));
 
 //             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
 //             for(int i = 0; i < LOOPS; i++)
-//                 sh_evaluation(x_i, k_i, s2_i, az_i, o_i);
+//                 sh_evaluation(*x_i, k_i, s2_i, az_i, o_i);
 //             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+            
+//             nsecs = (nsecs_post-nsecs_pre);
 
+//             free(x_i);
 //             free(k_i);
 //             free(s2_i);
 //             free(az_i);
@@ -1317,7 +1472,29 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case 3:{ // sh_reconstruction
+//         case(6): {  // sh_evaluation
+//             RSS_i (*x_i) = malloc(sizeof(RSS_i));
+//             RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             ASS_i (*az_i) = malloc(sizeof(ASS_i[LAMBDA]));
+//             ASS_i (*o_i) = malloc(sizeof(ASS_i[LAMBDA]));
+
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_evaluation(*x_i, k_i, s2_i, az_i, o_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+            
+//             nsecs = (nsecs_post-nsecs_pre);
+
+//             free(x_i);
+//             free(k_i);
+//             free(s2_i);
+//             free(az_i);
+//             free(o_i);
+            
+//             return nsecs;
+//         }
+//         case(7):{ // sh_reconstruction
 
 //             ASS_i (*o_i)[LAMBDA] = malloc(sizeof(ASS_i[CONST_N][LAMBDA]));
 //             f_elm_t (*o) = malloc(sizeof(f_elm_t[LAMBDA]));
@@ -1326,13 +1503,14 @@ int mal_protocol_full(prng_seed seed){
 //             for(int i = 0; i < LOOPS; i++)
 //                 sh_reconstruction(o_i, o);
 //             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs = (nsecs_post - nsecs_pre);
 
 //             free(o);
 //             free(o_i);
 
 //             return nsecs;
 //         }
-//         case 4: { // calc_symbols
+//         case(8): { // calc_symbols
 //             f_elm_t o[LAMBDA];
 //             unsigned char L[PRF_BYTES];
 
@@ -1340,10 +1518,10 @@ int mal_protocol_full(prng_seed seed){
 //             for(int i = 0; i < LOOPS; i++)
 //                 calc_symbols(o, L);
 //             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
-
+//             nsecs = (nsecs_post - nsecs_pre);
 //             return nsecs;
 //         }
-//         case(5): {  // mal_tp_setup
+//         case(9): {  // mal_tp_setup
             
 //             RSS_i (*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
 //             RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
@@ -1369,7 +1547,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(6): {  // mal_setup_zeros
+//         case(10): {  // mal_setup_zeros
 
 //             ASS_seed_zero_i (*aseedz_i)  = malloc(sizeof(ASS_seed_zero_i));
 //             RSS_seed_zero_i (*rseedz_i)  = malloc(sizeof(RSS_seed_zero_i));
@@ -1394,7 +1572,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(7): {  // mal_setup_mul_1
+//         case(11): {  // mal_setup_mul_1
             
 //             RSS_i (*rz_i) = malloc(sizeof(RSS_i[LAMBDA]));
 //             RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
@@ -1415,7 +1593,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(8): {  // mal_setup_mul_1
+//         case(12): {  // mal_setup_mul_1
 
 //             RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
 //             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
@@ -1432,7 +1610,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(9): {  // input
+//         case(13): {  // input
             
 //             f_elm_t x;
 //             RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
@@ -1447,7 +1625,7 @@ int mal_protocol_full(prng_seed seed){
 //             free(x_i);
 //             return nsecs;
 //         }
-//         case(10): {  // mal_evaluation
+//         case(14): {  // mal_evaluation
             
 //             RSS_i (*x_i) = malloc(sizeof(RSS_i[1]));
 //             RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
@@ -1476,7 +1654,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case(11): { // mal_reconstruction
+//         case(15): { // mal_reconstruction
             
 //             DRSS_i (*o_i)[LAMBDA] = malloc(sizeof(DRSS_i[CONST_N][LAMBDA]));
 //             DRSS_digest_i (*h_i) = malloc(sizeof(DRSS_digest_i[CONST_N]));
@@ -1495,7 +1673,7 @@ int mal_protocol_full(prng_seed seed){
 
 //             return nsecs;
 //         }
-//         case (12): { // calc_symbols
+//         case(16): { // calc_symbols
 //             f_elm_t o[LAMBDA];
 //             unsigned char L[PRF_BYTES];
 
@@ -1536,12 +1714,15 @@ int main(int argc, char* argv[]){
 
     prng_seed seed = {0};
     uint64_t nsecs;
-    int test = 0;
+    int test = 1;
 
     init_inverses();
     generate_table();
     const char *function_names[] = {\
     "sh_tp_setup runs in .....................", \
+    "sh_setup_zeros runs in ..................", \
+    "sh_setup_mul_1 runs in ..................", \
+    "sh_setup_mul_2 runs in ..................", \
     "sh_input runs in ........................", \
     "sh_evaluation runs in ...................", \
     "sh_reconstruction runs in ...............", \
@@ -1558,32 +1739,19 @@ int main(int argc, char* argv[]){
 
 
 
-
-    
-
-
-
     #if (ADVERSARY==SEMIHONEST)
 
-        test = sh_protocol(seed);
+        test = sh_protocol_full(seed);
 
         printf("%3d bits, Semi-honest; Correctness check: %s             \n\n", NBITS_FIELD, PASS(test));
 
-        #define START_FUNC  0
-        #define END_FUNC    5
-
     #elif(ADVERSARY==MALICIOUS)
-            
+
         #if (CONST_T >= 3)
             test = mal_protocol(seed);
-            #undef  LOOPS
-            #define LOOPS   2
         #elif (CONST_T <= 2)
             test = mal_protocol_full(seed); // test
         #endif
-
-        #define START_FUNC  5
-        #define END_FUNC    13
 
         printf("%3d bits, Malicious; Correctness check: %s \n\n", NBITS_FIELD, PASS(test));
 
