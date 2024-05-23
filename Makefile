@@ -1,10 +1,14 @@
 # Makefile
 CC = gcc
-CFLAGS += -Wno-sign-compare -Wno-unused-function -Wall -Wextra -std=gnu11 -Wcomment -O3 -Ofast
-# CFLAGS += -g -fsanitize=address
-# CFLAGS += -ferror-limit=1
+CFLAGS += -Wall -Wextra -std=gnu11 -Wcomment -O3 -Ofast
+# CFLAGS += -g -fsanitize=address -ferror-limit=1
 CFLAGS += -I/usr/local/include
-LIBS = /usr/local/lib/libblake3.a
+LDFLAGS += -lblake3
+
+ifneq ($(wildcard /usr/local/lib/libblake3.a),)
+    LIBS += /usr/local/lib/libblake3.a
+endif
+
 .NOTPARALLEL:
 
 # Optimization flag
