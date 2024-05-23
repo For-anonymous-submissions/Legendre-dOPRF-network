@@ -23,7 +23,7 @@ void *communicate_with_server(void *arg)
 
     // Serialize RSS_i data
     uint8_t serialized_data[sizeof(RSS_i)];
-    serialize_RSS_i(data->message, serialized_data);
+    serialize_RSS_i(&(data->message), serialized_data);
 
     send(sock, serialized_data, sizeof(serialized_data), 0);
 
@@ -120,8 +120,8 @@ int main()
 
     pthread_t threads[CONST_N];
     server_data_t server_data[CONST_N];
-    int socks[CONST_N];
-    struct sockaddr_in serv_addrs[CONST_N];
+
+    // struct sockaddr_in serv_addrs[CONST_N];
     struct timespec start, end;
     long elapsed_ns;
     double elapsed_ms;
@@ -136,7 +136,7 @@ int main()
     // Get the start time before dealing with messages
     if (clock_gettime(CLOCK_MONOTONIC, &start) == -1)
     {
-        error("clock_gettime");
+        perror("clock_gettime");
     }
 
 /*********Here starts the client input stage************/
@@ -161,7 +161,7 @@ int main()
     {
         if (pthread_create(&threads[i], NULL, communicate_with_server, &server_data[i]) != 0)
         {
-            error("Failed to create thread");
+            perror("Failed to create thread");
         }
     }
 
@@ -172,8 +172,8 @@ int main()
     }
 
     // Correct memory allocation
-    DRSS_i (*o_i_all)[CONST_N][LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
-    DRSS_digest_i (*h_i_all)[CONST_N] = malloc(CONST_N * sizeof(DRSS_digest_i));
+    DRSS_i (*o_i_all)[LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
+    DRSS_digest_i (*h_i_all) = malloc(CONST_N * sizeof(DRSS_digest_i));
 
     all_commu_size += CONST_N * (sizeof(DRSS_i) * LAMBDA + sizeof(DRSS_digest_i));
 
@@ -183,10 +183,10 @@ int main()
        int offset = 0;
        for (int j = 0; j < LAMBDA; j++)
        {
-           deserialize_DRSS_i(server_data[i].response + offset, (*o_i_all)[i][j]);
+           deserialize_DRSS_i(server_data[i].response + offset, &o_i_all[i][j]);
            offset += sizeof(DRSS_i);
        }
-       deserialize_DRSS_digest_i(server_data->response + offset, (*h_i_all)[i]);
+       deserialize_DRSS_digest_i(server_data->response + offset, &h_i_all[i]);
     }
 
     // CLIENT RECONSTRUCTION STAGE
@@ -198,7 +198,7 @@ int main()
     // Returns 1 if servers acted dishonestly, otherwise 0
     int test=0;
     test |= mal_reconstruction(o_i_all, h_i_all, o);
-
+    (void)test;
     ////////////////////////////////////////////
     // Client computes Legendre symbols
     calc_symbols(o, L);
@@ -207,12 +207,13 @@ int main()
     free(o_i_all);
     free(h_i_all);
     free(o);
+    free(x_i);
 
 
     // Get the end time after all messages have been dealt with
     if (clock_gettime(CLOCK_MONOTONIC, &end) == -1)
     {
-        error("clock_gettime");
+        perror("clock_gettime");
     }
 
     // Calculate the elapsed time in milliseconds
@@ -227,6 +228,5 @@ int main()
     {
         close(server_data[i].sock);
     }
-
     return 0;
 }

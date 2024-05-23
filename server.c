@@ -173,7 +173,6 @@ void mal_setup_zeros(const int i, ASS_seed_zero_i aseedz_i, RSS_seed_zero_i rsee
     }}
     /////////////////////////////////////////////
     free(dz_temp);
-
 }
 
 
@@ -318,6 +317,7 @@ void mal_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[L
 int main(int argc, char const *argv[])
 {
     int test = 0;
+    (void)test;
 
     init_inverses();
     generate_table();
@@ -429,7 +429,7 @@ int main(int argc, char const *argv[])
     }
 
     // Forcefully attaching socket to the port
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR , &opt, sizeof(opt)))
     {
         perror("setsockopt");
         close(server_fd);
@@ -481,10 +481,10 @@ int main(int argc, char const *argv[])
     // DRSS_i(*o_i)[LAMBDA] = malloc(sizeof(DRSS_i[LAMBDA]));
     // DRSS_digest_i(*h_i) = malloc(sizeof(DRSS_digest_i));
 
-    DRSS_i(*o_i)[LAMBDA] = malloc(LAMBDA * sizeof(DRSS_i));
+    DRSS_i(*o_i) = malloc(LAMBDA * sizeof(DRSS_i));
     DRSS_digest_i(*h_i) = malloc(sizeof(DRSS_digest_i));
 
-    mal_evaluation(x_i, k_i[SERVER_ID], s2_i[SERVER_ID], dz_i[SERVER_ID], az_i[SERVER_ID], o_i, h_i);
+    mal_evaluation(*x_i, k_i[SERVER_ID], s2_i[SERVER_ID], dz_i[SERVER_ID], az_i[SERVER_ID], o_i, *h_i);
     ////////////////////////////////////////////
     free(x_i);
     free(k_i);
@@ -497,7 +497,7 @@ int main(int argc, char const *argv[])
     // Serialize the data into the response buffer
     int offset = 0;
     for (int i = 0; i < LAMBDA; i++) {
-        serialize_DRSS_i(&(*o_i)[i], response + offset);
+        serialize_DRSS_i(&(o_i)[i], response + offset);
         offset += sizeof(DRSS_i);
     }
     serialize_DRSS_digest_i(h_i, response + offset);
