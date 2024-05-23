@@ -403,7 +403,7 @@ int main(int argc, char const *argv[])
     free(rseedz_i);
     free(dseedz_i);
 
-    printf("Complete setup phase. \n");
+    // printf("Complete setup phase. \n");
 
 
     /**Network part initialization*/
@@ -455,7 +455,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d\n", port);
+    // printf("Server listening on port %d\n", port);
 
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
     {
@@ -503,7 +503,7 @@ int main(int argc, char const *argv[])
     serialize_DRSS_digest_i(h_i, response + offset);
 
     send(new_socket, response, (sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i), 0);
-    printf("Response sent\n");
+    // printf("Response sent\n");
 
     free(o_i);
     free(h_i);

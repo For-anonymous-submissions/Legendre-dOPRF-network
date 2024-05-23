@@ -112,20 +112,22 @@ int mal_reconstruction(const DRSS_i o_i[CONST_N][LAMBDA], const DRSS_digest_i h_
 }
 
 int main()
-{
+{   
+    int all_commu_size=0;
+
     init_inverses();
     generate_table();
 
-    pthread_t threads[SERVER_COUNT];
-    server_data_t server_data[SERVER_COUNT];
-    int socks[SERVER_COUNT];
-    struct sockaddr_in serv_addrs[SERVER_COUNT];
+    pthread_t threads[CONST_N];
+    server_data_t server_data[CONST_N];
+    int socks[CONST_N];
+    struct sockaddr_in serv_addrs[CONST_N];
     struct timespec start, end;
     long elapsed_ns;
     double elapsed_ms;
 
     // Establish socket connections
-    for (int i = 0; i < SERVER_COUNT; i++)
+    for (int i = 0; i < CONST_N; i++)
     {
         setup_client_socket(&server_data[i].sock, "127.0.0.1", SERVER_PORT_BASE + i);
         server_data[i].server_index = i;
@@ -147,13 +149,15 @@ int main()
     input(x, x_i, seed);
 /*********Here ends the client input stage************/
 
-    for (int i = 0; i < SERVER_COUNT; i++)
+    all_commu_size += CONST_N*sizeof(RSS_i);
+
+        for (int i = 0; i < CONST_N; i++)
     {
         memcpy(server_data[i].message, x_i[i], sizeof(RSS_i));
     }
 
     // Create threads to communicate with servers simultaneously
-    for (int i = 0; i < SERVER_COUNT; i++)
+    for (int i = 0; i < CONST_N; i++)
     {
         if (pthread_create(&threads[i], NULL, communicate_with_server, &server_data[i]) != 0)
         {
@@ -162,17 +166,19 @@ int main()
     }
 
     // Wait for all threads to complete
-    for (int i = 0; i < SERVER_COUNT; i++)
+    for (int i = 0; i < CONST_N; i++)
     {
         pthread_join(threads[i], NULL);
     }
 
     // Correct memory allocation
-    DRSS_i (*o_i_all)[SERVER_COUNT][LAMBDA] = malloc(SERVER_COUNT * LAMBDA * sizeof(DRSS_i));
-    DRSS_digest_i (*h_i_all)[SERVER_COUNT] = malloc(SERVER_COUNT * sizeof(DRSS_digest_i));
+    DRSS_i (*o_i_all)[CONST_N][LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
+    DRSS_digest_i (*h_i_all)[CONST_N] = malloc(CONST_N * sizeof(DRSS_digest_i));
+
+    all_commu_size += CONST_N * (sizeof(DRSS_i) * LAMBDA + sizeof(DRSS_digest_i));
 
     //Deserialize the data from the response buffer
-    for (int i = 0; i < SERVER_COUNT; i++) {
+    for (int i = 0; i < CONST_N; i++) {
        
        int offset = 0;
        for (int j = 0; j < LAMBDA; j++)
@@ -212,10 +218,12 @@ int main()
     // Calculate the elapsed time in milliseconds
     elapsed_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
     elapsed_ms = elapsed_ns / 1e6;
-    printf("Total time required for dealing with messages: %.2f ms\n", elapsed_ms);
+
+    printf("Total time required dealing messages: %.2f ms\n", elapsed_ms);
+    printf("Total communication size: %.2f KB\n", (float)all_commu_size / 1024);
 
     // Close all sockets
-    for (int i = 0; i < SERVER_COUNT; i++)
+    for (int i = 0; i < CONST_N; i++)
     {
         close(server_data[i].sock);
     }

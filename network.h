@@ -5,9 +5,7 @@
 #include <arpa/inet.h>
 #include "dOPRF.h"
 
-#define BUFFER_SIZE 1024
 #define SERVER_PORT_BASE 9080  // Base port for the first server
-#define SERVER_COUNT CONST_N   // Number of servers
 
 typedef struct {
     int server_index;
