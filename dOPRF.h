@@ -127,6 +127,14 @@ typedef struct {
 #define i_hold_T(i, T)          (!((T.bin) & (1 << (i))))
 #define i_hold_TT(i, T1, T2)    (!(((T1.bin) | (T2.bin))& (1 << (i))))
 
+// ONE-TIME-COMPUTATION
+// Precomputed constants, filled in at main call
+extern f_elm_t f_inverses[CONST_N + 1];
+// Table for holding binomial values, precomputed at main call
+extern uint32_t binom_table[CONST_N + 1][CONST_N + 1];
+
+
+
 
 /////////////////////////////////////////////
 // Printing shares
@@ -610,5 +618,17 @@ void mult_RSS_to_RSS_evaluation(const RSS_i a, const RSS_i b, RSS C[TAU_i * TAU_
 // Second stage, receiving and reconstructing output
 int mult_RSS_to_RSS_reconstruction(const RSS_i C_j[CONST_N][TAU_i * TAU_i], RSS_i c);
 
+// Function to serialize RSS_i into a byte array
+void serialize_RSS_i(RSS_i *data, uint8_t *buffer);
+// Function to deserialize byte array into RSS_i
+void deserialize_RSS_i(uint8_t *buffer, RSS_i *data);
+
+void serialize_DRSS_i(DRSS_i *data, uint8_t *buffer);
+void serialize_DRSS_digest_i(DRSS_digest_i *data, uint8_t *buffer);
+
+void deserialize_DRSS_i(uint8_t *buffer, DRSS_i *data);
+void deserialize_DRSS_digest_i(uint8_t *buffer, DRSS_digest_i *data);
+
+void calc_symbols(f_elm_t o[LAMBDA], unsigned char LOPRF[PRF_BYTES]);
 
 #endif

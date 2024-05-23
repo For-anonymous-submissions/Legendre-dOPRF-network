@@ -80,6 +80,7 @@ void cond_select(const f_elm_t a, const f_elm_t b, f_elm_t c, uint8_t cond)
 // Copy a field element
 void f_copy(const f_elm_t a, f_elm_t b)
 {
+    // printf("start f_copy \n");
     for (int i = 0; i < WORDS_FIELD; i++)
         b[i] = a[i];
 }
@@ -122,29 +123,3 @@ void f_rand_array_prng_long(f_elm_t *a, const unsigned long long num_elms, prng_
     for(unsigned long long i = 0; i < num_elms; i++)
         f_red(a[i]);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

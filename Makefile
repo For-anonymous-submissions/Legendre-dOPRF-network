@@ -21,7 +21,9 @@ endif
 # Basic source files
 SRC = random/random.c \
       arith.c \
- 	  bench.c
+ 	  bench.c \
+	  dOPRF.c \
+	  network.c \
 
 # Add arithmetic source files
 ifeq ($(OPT_LEVEL),GENERIC)
@@ -39,64 +41,37 @@ SRC512 = $(SRC) p512/arm64/arith_arm512.c p512/arm64/arith_arm512.S
 endif
 
 
-.PHONY: all dOPRF arith clean
+.PHONY: all client server clean
 
-all: dOPRF
-#  arith
+all:  client server
 
+client: client128 
 
-dOPRF: dOPRF128 dOPRF256 dOPRF512
+server: server128
+# client: client128 client256 client512
 
-#dOPRF64
-
-# dOPRF128 dOPRF192 dOPRF256 dOPRF512
-
+# server: server128 server256 server512
 
 clean:
-	rm -f dOPRF64 dOPRF128 dOPRF192 dOPRF256 dOPRF512 arith64 arith128 arith192 arith256 arith512
+	rm -f client128  server128
+# clean:
+# 	rm -f client128 client256 client512 server128 server256 server512
 
 
-# arith: arith64
-
-# arith128 arith192 arith256 arith512
-
-
-# dOPRF64: main.c $(SRC64) dOPRF.c
-# $(CC) $(CFLAGS)   -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-dOPRF128: main.c $(SRC128) dOPRF.c
+client128: client.c $(SRC128)
 	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# dOPRF192: main.c $(SRC192) dOPRF.c
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=2 -DPRIMES=$(PRIMES_VAL) -o $@ $^
+# client256: client.c $(SRC256)
+# 	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-dOPRF256: main.c $(SRC256) dOPRF.c
-	$(CC) $(CFLAGS)  -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+# client512: client.c $(SRC512)
+# 	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-dOPRF512: main.c $(SRC512) dOPRF.c
-	$(CC) $(CFLAGS)  -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+server128: server.c $(SRC128)
+	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
+# server256: server.c $(SRC256)
+# 	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# arith64: arith_tests.c $(SRC64)
-# 	$(CC) $(CFLAGS)  -DSEC_LEVEL=0 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# arith128: arith_tests.c $(SRC128)
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^
-
-# arith192: arith_tests.c $(SRC192)
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=2 -DPRIMES=$(PRIMES_VAL) -o $@ $^
-
-# arith256: arith_tests.c $(SRC256)
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^
-
-# arith512: arith_tests.c $(SRC512)
-# 	$(CC) $(CFLAGS) $(LIBS)  -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^
-
-
-# clean:
-# 	rm -f dOPRF64 arith64
-	
-# dOPRF192 dOPRF256 dOPRF512 arith64 arith128 arith192 arith256 arith512
-
-
-
+# server512: server.c $(SRC512)
+# 	$(CC) $(CFLAGS)   -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)

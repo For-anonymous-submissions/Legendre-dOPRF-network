@@ -1,11 +1,6 @@
 #ifndef BENCH_H
 #define BENCH_H
 
-// #include <stdint.h>
-// #include <stdio.h>
-
-// #include "random/random.h"
-
 // Benchmarking
 #define WARMUP          10000
 #define BENCH_LOOPS     20000

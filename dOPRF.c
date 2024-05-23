@@ -37,9 +37,6 @@ void init_inverses() {
     }
 }
 
-
-
-
 /////////////////////////////////////////////
 // Printing shares
 /////////////////////////////////////////////
@@ -500,7 +497,7 @@ void open_DRSS(const DRSS A, f_elm_t a){
 // Secret share distribution to parties
 /////////////////////////////////////////////
 
-// Distribute a RSS x to CONST_N parties, ach party recieves x_i[i] shares
+// Distribute a RSS x to CONST_N parties, each party recieves x_i[i] shares
 void distribute_RSS(const RSS x, RSS_i x_i[CONST_N]){
     ind_T Ti_inds[CONST_N] = {0};
 
@@ -1061,19 +1058,85 @@ int mult_RSS_to_RSS_reconstruction(const RSS_i c_j[CONST_N][TAU_i * TAU_i], RSS_
     return test;
 }
 
+// Function to serialize RSS_i into a byte array
+void serialize_RSS_i(RSS_i *data, uint8_t *buffer)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i; i++)
+    {
+        memcpy(buffer + offset, &(*data)[i], sizeof(f_elm_t));
+        offset += sizeof(f_elm_t);
+    }
+}
 
+// Function to deserialize byte array into RSS_i
+void deserialize_RSS_i(uint8_t *buffer, RSS_i *data)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i; i++)
+    {
+        memcpy(&(*data)[i], buffer + offset, sizeof(f_elm_t));
+        offset += sizeof(f_elm_t);
+    }
+}
 
+// Serialize DRSS_i
+void serialize_DRSS_i(DRSS_i *data, uint8_t *buffer)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i * TAU_i; i++)
+    {
+        memcpy(buffer + offset, &(*data)[i], sizeof(f_elm_t));
+        offset += sizeof(f_elm_t);
+    }
+}
 
+// Serialize DRSS_digest_i
+void serialize_DRSS_digest_i(DRSS_digest_i *data, uint8_t *buffer)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i * TAU_i; i++)
+    {
+        memcpy(buffer + offset, &(*data)[i], sizeof(uint8_t));
+        offset += sizeof(uint8_t);
+    }
+}
 
+void deserialize_DRSS_i(uint8_t *buffer, DRSS_i *data)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i * TAU_i; i++)
+    {
+        memcpy(&(*data)[i], buffer + offset, sizeof(f_elm_t));
+        offset += sizeof(f_elm_t);
+    }
+}
 
+void deserialize_DRSS_digest_i(uint8_t *buffer, DRSS_digest_i *data)
+{
+    int offset = 0;
+    for (int i = 0; i < TAU_i * TAU_i; i++)
+    {
+        memcpy(&(*data)[i], buffer + offset, sizeof(uint8_t));
+        offset += sizeof(uint8_t);
+    }
+}
 
+/////////////////////////////////////////////
+// CALCULATE LEGENDRE SYMBOLS (SEMI-HONEST AND MALICIOUS)
+/////////////////////////////////////////////
+void calc_symbols(f_elm_t o[LAMBDA], unsigned char LOPRF[PRF_BYTES])
+{
+    int index, pos;
+    memset(LOPRF, 0, PRF_BYTES);
 
+    for (int j = 0; j < LAMBDA; j++)
+    {
+        unsigned char t = 0;
+        index = j / 8;
+        pos = j % 8;
 
-
-
-
-
-
-
-
-
+        f_leg(o[j], &t);
+        LOPRF[index] |= (t << pos);
+    }
+}

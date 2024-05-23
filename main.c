@@ -1166,6 +1166,8 @@ int mal_protocol_full(prng_seed seed){
     free(dseedz_i);
 
 
+
+    //Change from here: involve network 
     ////////////////////////////////////////////
     // CLIENT INPUT STAGE
     ////////////////////////////////////////////
@@ -1174,7 +1176,6 @@ int mal_protocol_full(prng_seed seed){
 
     f_rand(x, seed);
     input(x, x_i, seed);
-
     ////////////////////////////////////////////
 
 
@@ -1263,269 +1264,269 @@ int mal_protocol_full(prng_seed seed){
 }
 
 
-uint64_t bench(int function_selector, prng_seed seed){
-    uint64_t nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
-    switch (function_selector) {
-        case(0): {
-            RSS_i (*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
-            RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
-            ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
+// uint64_t bench(int function_selector, prng_seed seed){
+//     uint64_t nsecs_pre = 0, nsecs_post = 0, nsecs = 0;
+//     switch (function_selector) {
+//         case(0): {
+//             RSS_i (*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
+//             RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
+//             ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                sh_tp_setup(seed, k_i, rseed_i, aseedz_i);
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_tp_setup(seed, k_i, rseed_i, aseedz_i);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(k_i);
-            free(rseed_i);
-            free(aseedz_i);
+//             free(k_i);
+//             free(rseed_i);
+//             free(aseedz_i);
 
-            return nsecs;
-        }
-        case(1): {  // input
+//             return nsecs;
+//         }
+//         case(1): {  // input
             
-            f_elm_t x;
-            RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
+//             f_elm_t x;
+//             RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                input(x, x_i, seed);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 input(x, x_i, seed);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
             
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(x_i);
-            return nsecs;
-        }
-        case(2): {  // sh_evaluation
-            RSS_i x_i;
-            RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
-            RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
-            ASS_i (*az_i) = malloc(sizeof(RSS_i[LAMBDA]));
-            ASS_i (*o_i) = malloc(sizeof(ASS_i[LAMBDA]));
+//             free(x_i);
+//             return nsecs;
+//         }
+//         case(2): {  // sh_evaluation
+//             RSS_i x_i;
+//             RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             ASS_i (*az_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             ASS_i (*o_i) = malloc(sizeof(ASS_i[LAMBDA]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                sh_evaluation(x_i, k_i, s2_i, az_i, o_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_evaluation(x_i, k_i, s2_i, az_i, o_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            free(k_i);
-            free(s2_i);
-            free(az_i);
-            free(o_i);
+//             free(k_i);
+//             free(s2_i);
+//             free(az_i);
+//             free(o_i);
 
-            return nsecs;
-        }
-        case 3:{ // sh_reconstruction
+//             return nsecs;
+//         }
+//         case 3:{ // sh_reconstruction
 
-            ASS_i (*o_i)[LAMBDA] = malloc(sizeof(ASS_i[CONST_N][LAMBDA]));
-            f_elm_t (*o) = malloc(sizeof(f_elm_t[LAMBDA]));
+//             ASS_i (*o_i)[LAMBDA] = malloc(sizeof(ASS_i[CONST_N][LAMBDA]));
+//             f_elm_t (*o) = malloc(sizeof(f_elm_t[LAMBDA]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                sh_reconstruction(o_i, o);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 sh_reconstruction(o_i, o);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            free(o);
-            free(o_i);
+//             free(o);
+//             free(o_i);
 
-            return nsecs;
-        }
-        case 4: { // calc_symbols
-            f_elm_t o[LAMBDA];
-            unsigned char L[PRF_BYTES];
+//             return nsecs;
+//         }
+//         case 4: { // calc_symbols
+//             f_elm_t o[LAMBDA];
+//             unsigned char L[PRF_BYTES];
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                calc_symbols(o, L);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 calc_symbols(o, L);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            return nsecs;
-        }
-        case(5): {  // mal_tp_setup
+//             return nsecs;
+//         }
+//         case(5): {  // mal_tp_setup
             
-            RSS_i (*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
-            RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
-            DRSS_seed_i (*dseed_i) = malloc(sizeof(DRSS_seed_i[CONST_N]));
-            ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
-            RSS_seed_zero_i (*rseedz_i) = malloc(sizeof(RSS_seed_zero_i[CONST_N]));
-            DRSS_seed_zero_i (*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i[CONST_N]));
+//             RSS_i (*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
+//             RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i[CONST_N]));
+//             DRSS_seed_i (*dseed_i) = malloc(sizeof(DRSS_seed_i[CONST_N]));
+//             ASS_seed_zero_i (*aseedz_i) = malloc(sizeof(ASS_seed_zero_i[CONST_N]));
+//             RSS_seed_zero_i (*rseedz_i) = malloc(sizeof(RSS_seed_zero_i[CONST_N]));
+//             DRSS_seed_zero_i (*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i[CONST_N]));
 
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_tp_setup(seed, k_i, rseed_i, dseed_i, aseedz_i, rseedz_i, dseedz_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_tp_setup(seed, k_i, rseed_i, dseed_i, aseedz_i, rseedz_i, dseedz_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(k_i);
-            free(rseed_i);
-            free(dseed_i);
-            free(aseedz_i);
-            free(rseedz_i);
-            free(dseedz_i);
+//             free(k_i);
+//             free(rseed_i);
+//             free(dseed_i);
+//             free(aseedz_i);
+//             free(rseedz_i);
+//             free(dseedz_i);
 
-            return nsecs;
-        }
-        case(6): {  // mal_setup_zeros
+//             return nsecs;
+//         }
+//         case(6): {  // mal_setup_zeros
 
-            ASS_seed_zero_i (*aseedz_i)  = malloc(sizeof(ASS_seed_zero_i));
-            RSS_seed_zero_i (*rseedz_i)  = malloc(sizeof(RSS_seed_zero_i));
-            DRSS_seed_zero_i (*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i));
+//             ASS_seed_zero_i (*aseedz_i)  = malloc(sizeof(ASS_seed_zero_i));
+//             RSS_seed_zero_i (*rseedz_i)  = malloc(sizeof(RSS_seed_zero_i));
+//             DRSS_seed_zero_i (*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i));
             
-            ASS_i (*az_i)[TAU_i * TAU_i][3]  = malloc(sizeof(ASS_i[LAMBDA][TAU_i * TAU_i][3]));
-            RSS_i (*rz_i)  = malloc(sizeof(RSS_i[LAMBDA]));
-            DRSS_i (*dz_i) = malloc(sizeof(DRSS_i[LAMBDA]));
+//             ASS_i (*az_i)[TAU_i * TAU_i][3]  = malloc(sizeof(ASS_i[LAMBDA][TAU_i * TAU_i][3]));
+//             RSS_i (*rz_i)  = malloc(sizeof(RSS_i[LAMBDA]));
+//             DRSS_i (*dz_i) = malloc(sizeof(DRSS_i[LAMBDA]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_setup_zeros(i % CONST_N, *aseedz_i, *rseedz_i, *dseedz_i, az_i, rz_i, dz_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_setup_zeros(i % CONST_N, *aseedz_i, *rseedz_i, *dseedz_i, az_i, rz_i, dz_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(az_i);
-            free(rz_i);
-            free(dz_i);
-            free(aseedz_i);
-            free(rseedz_i);
-            free(dseedz_i);
+//             free(az_i);
+//             free(rz_i);
+//             free(dz_i);
+//             free(aseedz_i);
+//             free(rseedz_i);
+//             free(dseedz_i);
 
-            return nsecs;
-        }
-        case(7): {  // mal_setup_mul_1
+//             return nsecs;
+//         }
+//         case(7): {  // mal_setup_mul_1
             
-            RSS_i (*rz_i) = malloc(sizeof(RSS_i[LAMBDA]));
-            RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
-            RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i));
-            DRSS_seed_i (*dseed_i) = malloc(sizeof(DRSS_seed_i));
+//             RSS_i (*rz_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
+//             RSS_seed_i (*rseed_i) = malloc(sizeof(RSS_seed_i));
+//             DRSS_seed_i (*dseed_i) = malloc(sizeof(DRSS_seed_i));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_setup_mul_1(rz_i, c_i, *rseed_i, *dseed_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_setup_mul_1(rz_i, c_i, *rseed_i, *dseed_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(rz_i);
-            free(c_i);
-            free(rseed_i);
-            free(dseed_i);
+//             free(rz_i);
+//             free(c_i);
+//             free(rseed_i);
+//             free(dseed_i);
 
-            return nsecs;
-        }
-        case(8): {  // mal_setup_mul_1
+//             return nsecs;
+//         }
+//         case(8): {  // mal_setup_mul_1
 
-            RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
-            RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*c_i)[CONST_N][TAU_i * TAU_i] = malloc(sizeof(RSS_i[LAMBDA][CONST_N][TAU_i * TAU_i]));
+//             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_setup_mul_2(c_i, s2_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_setup_mul_2(c_i, s2_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(c_i);
-            free(s2_i);
+//             free(c_i);
+//             free(s2_i);
 
-            return nsecs;
-        }
-        case(9): {  // input
+//             return nsecs;
+//         }
+//         case(9): {  // input
             
-            f_elm_t x;
-            RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
+//             f_elm_t x;
+//             RSS_i (*x_i) = malloc(sizeof(RSS_i[CONST_N]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                input(x, x_i, seed);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 input(x, x_i, seed);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
             
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(x_i);
-            return nsecs;
-        }
-        case(10): {  // mal_evaluation
+//             free(x_i);
+//             return nsecs;
+//         }
+//         case(10): {  // mal_evaluation
             
-            RSS_i (*x_i) = malloc(sizeof(RSS_i[1]));
-            RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
-            RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*x_i) = malloc(sizeof(RSS_i[1]));
+//             RSS_i (*k_i) = malloc(sizeof(RSS_i[LAMBDA]));
+//             RSS_i (*s2_i) = malloc(sizeof(RSS_i[LAMBDA]));
 
-            ASS_i (*az_i)[TAU_i * TAU_i][3] = malloc(sizeof(ASS_i[LAMBDA][TAU_i * TAU_i][3]));
-            DRSS_i (*dz_i) = malloc(sizeof(DRSS_i[LAMBDA]));
+//             ASS_i (*az_i)[TAU_i * TAU_i][3] = malloc(sizeof(ASS_i[LAMBDA][TAU_i * TAU_i][3]));
+//             DRSS_i (*dz_i) = malloc(sizeof(DRSS_i[LAMBDA]));
 
-            DRSS_i (*o_i) = malloc(sizeof(DRSS_i[LAMBDA]));
-            DRSS_digest_i (*h_i) = malloc(sizeof(DRSS_digest_i));
+//             DRSS_i (*o_i) = malloc(sizeof(DRSS_i[LAMBDA]));
+//             DRSS_digest_i (*h_i) = malloc(sizeof(DRSS_digest_i));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_evaluation(*x_i, k_i, s2_i, dz_i, az_i, o_i, *h_i);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_evaluation(*x_i, k_i, s2_i, dz_i, az_i, o_i, *h_i);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
             
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(x_i);
-            free(k_i);
-            free(s2_i);
-            free(az_i);
-            free(dz_i);
-            free(o_i);
-            free(h_i);
+//             free(x_i);
+//             free(k_i);
+//             free(s2_i);
+//             free(az_i);
+//             free(dz_i);
+//             free(o_i);
+//             free(h_i);
 
-            return nsecs;
-        }
-        case(11): { // mal_reconstruction
+//             return nsecs;
+//         }
+//         case(11): { // mal_reconstruction
             
-            DRSS_i (*o_i)[LAMBDA] = malloc(sizeof(DRSS_i[CONST_N][LAMBDA]));
-            DRSS_digest_i (*h_i) = malloc(sizeof(DRSS_digest_i[CONST_N]));
-            f_elm_t (*o) = malloc(sizeof(f_elm_t[LAMBDA]));
+//             DRSS_i (*o_i)[LAMBDA] = malloc(sizeof(DRSS_i[CONST_N][LAMBDA]));
+//             DRSS_digest_i (*h_i) = malloc(sizeof(DRSS_digest_i[CONST_N]));
+//             f_elm_t (*o) = malloc(sizeof(f_elm_t[LAMBDA]));
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                mal_reconstruction(o_i, h_i, o);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 mal_reconstruction(o_i, h_i, o);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
             
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            free(o_i);
-            free(h_i);
-            free(o);
+//             free(o_i);
+//             free(h_i);
+//             free(o);
 
-            return nsecs;
-        }
-        case (12): { // calc_symbols
-            f_elm_t o[LAMBDA];
-            unsigned char L[PRF_BYTES];
+//             return nsecs;
+//         }
+//         case (12): { // calc_symbols
+//             f_elm_t o[LAMBDA];
+//             unsigned char L[PRF_BYTES];
 
-            nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
-            for(int i = 0; i < LOOPS; i++)
-                calc_symbols(o, L);
-            nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
+//             nsecs_pre = cpucycles();    //cpucycles actually doesn't count cycles but counts nanoseconds
+//             for(int i = 0; i < LOOPS; i++)
+//                 calc_symbols(o, L);
+//             nsecs_post = cpucycles();   //cpucycles actually doesn't count cycles but counts nanoseconds
 
-            nsecs = (nsecs_post-nsecs_pre);
+//             nsecs = (nsecs_post-nsecs_pre);
 
-            return nsecs;
-        }
-        default: {
-            printf("Invalid function_selector. Please choose    \
-                    0 for sh_tp_setup,                          \
-                    1 for sh_input,                             \
-                    2 for sh_evaluation,                        \
-                    3 for sh_reconstruction,                    \
-                    4 for calc_symbols,                         \
-                    5 for mal_tp_setup,                         \
-                    6 for mal_setup_zeros,                      \
-                    7 for mal_setup_mul_1,                      \
-                    8 for mal_setup_mul_2,                      \
-                    9 for mal_input,                            \
-                    10 for mal_evaluation,                      \
-                    11 for mal_reconstruction,                  \
-                    12 for calc_symbols.\n");
-            return 0;
-        }
-        }
-}
+//             return nsecs;
+//         }
+//         default: {
+//             printf("Invalid function_selector. Please choose    \
+//                     0 for sh_tp_setup,                          \
+//                     1 for sh_input,                             \
+//                     2 for sh_evaluation,                        \
+//                     3 for sh_reconstruction,                    \
+//                     4 for calc_symbols,                         \
+//                     5 for mal_tp_setup,                         \
+//                     6 for mal_setup_zeros,                      \
+//                     7 for mal_setup_mul_1,                      \
+//                     8 for mal_setup_mul_2,                      \
+//                     9 for mal_input,                            \
+//                     10 for mal_evaluation,                      \
+//                     11 for mal_reconstruction,                  \
+//                     12 for calc_symbols.\n");
+//             return 0;
+//         }
+//         }
+// }
 
 
 int main(int argc, char* argv[]){
@@ -1588,10 +1589,10 @@ int main(int argc, char* argv[]){
 
     #endif
 
-    for(int function_selector = START_FUNC; function_selector < END_FUNC; function_selector++){
-        nsecs = bench(function_selector, seed);
-        printf("%s %14s ns\n", function_names[function_selector], print_num((double)((uint64_t)(nsecs/(LOOPS)))));
-    }
+    // for(int function_selector = START_FUNC; function_selector < END_FUNC; function_selector++){
+    //     nsecs = bench(function_selector, seed);
+    //     printf("%s %14s ns\n", function_names[function_selector], print_num((double)((uint64_t)(nsecs/(LOOPS)))));
+    // }
 
     printf("...........................................................\n\n");
 
