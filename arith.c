@@ -52,7 +52,7 @@ uint8_t f_eq(const f_elm_t a, const f_elm_t b)
     for(unsigned int i = 0; i < NBYTES_FIELD; i++)
         t |= ((uint8_t *)a)[i] ^ ((uint8_t *)b)[i];
 
-    return 1 - ((t | (0-t)) >> 7) & 0x01;
+    return 1 - (((t | (0-t)) >> 7) & 0x01);
 }
 
 // Compare two field elements for equality, 1 if not equal, 0 if equal
