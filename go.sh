@@ -16,8 +16,8 @@ for PARAMS in "${PARAM_SETS[@]}"; do
 
     echo "Running tests with CONST_T=$CONST_T and CONST_N=$CONST_N"
     # Modify the macro definitions in the header file
-    sed -i '' "s/^#define CONST_T .*/#define CONST_T $CONST_T/" $HEADER_FILE
-    sed -i '' "s/^#define CONST_N .*/#define CONST_N $CONST_N/" $HEADER_FILE
+    sed -i'' -e "s/^#define CONST_T .*/#define CONST_T $CONST_T/" $HEADER_FILE
+    sed -i'' -e "s/^#define CONST_N .*/#define CONST_N $CONST_N/" $HEADER_FILE
 
     echo "Running tests with CONST_T=$CONST_T and CONST_N=$CONST_N"
 
