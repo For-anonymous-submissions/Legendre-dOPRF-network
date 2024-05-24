@@ -27,11 +27,15 @@ void *communicate_with_server(void *arg)
 
     send(sock, serialized_data, sizeof(serialized_data), 0);
 
-
-
     // Receive response from server
-    int total_size = (sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i);
+    int total_size = 0;
     int bytes_received = 0;
+    #if (ADVERSARY == SEMIHONEST)
+        total_size = sizeof(f_elm_t) * LAMBDA;
+    #elif (ADVERSARY == MALICIOUS)
+        total_size = (sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i);
+    #endif
+    
     while (bytes_received < total_size) {
         int result = read(sock, data->response + bytes_received, total_size - bytes_received);
         if (result < 0) {
@@ -41,8 +45,6 @@ void *communicate_with_server(void *arg)
         }
         bytes_received += result;
     }
-
-    
 
     printf("Received and deserialized message from server %d\n", data->server_index + 1);
 
@@ -111,6 +113,23 @@ int mal_reconstruction(const DRSS_i o_i[CONST_N][LAMBDA], const DRSS_digest_i h_
     return ret;
 }
 
+/////////////////////////////////////////////
+// SEMI-HONEST RECONSTRUCTION
+/////////////////////////////////////////////
+void sh_reconstruction(const ASS_i o_i[CONST_N][LAMBDA], f_elm_t o[LAMBDA])
+{
+    ASS o_j;
+    subset_S S = S_N;
+
+    for (int j = 0; j < LAMBDA; j++)
+    {
+        for (int i = 0; i < CONST_N; i++)
+            f_copy(o_i[i][j][0], o_j[i]);
+        open_ASS(o_j, S, o[j]);
+    }
+}
+
+
 int main()
 {   
     int all_commu_size=0;
@@ -139,15 +158,15 @@ int main()
         perror("clock_gettime");
     }
 
-/*********Here starts the client input stage************/
+    /*********Here starts the client input stage************/
 
-    prng_seed seed = {0};
-    f_elm_t x;
-    RSS_i(*x_i) = malloc(sizeof(RSS_i[CONST_N]));
+        prng_seed seed = {0};
+        f_elm_t x;
+        RSS_i(*x_i) = malloc(sizeof(RSS_i[CONST_N]));
 
-    f_rand(x, seed);
-    input(x, x_i, seed);
-/*********Here ends the client input stage************/
+        f_rand(x, seed);
+        input(x, x_i, seed);
+    /*********Here ends the client input stage************/
 
     all_commu_size += CONST_N*sizeof(RSS_i);
 
@@ -165,51 +184,66 @@ int main()
         }
     }
 
-    // Wait for all threads to complete
+    //Wait for all threads to complete
     for (int i = 0; i < CONST_N; i++)
     {
         pthread_join(threads[i], NULL);
     }
 
+    // CLIENT RECONSTRUCTION STAGE
+    // The client analyses differently with different protocols
+    f_elm_t(*o) = malloc(LAMBDA * sizeof(f_elm_t));
+    unsigned char L[PRF_BYTES] = {0};
+#if (ADVERSARY == SEMIHONEST)
+    ASS_i(*o_i_all) [LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(ASS_i));
+
+    all_commu_size += CONST_N * sizeof(ASS_i) * LAMBDA;
+
+    for (int i = 0; i < CONST_N; i++)
+    {
+        int offset = 0;
+        for (int j = 0; j < LAMBDA; j++)
+        {
+            deserialize_ASS_i(server_data[i].response + offset, &o_i_all[i][j]);
+            offset += sizeof(ASS_i);
+        }
+    }
+    sh_reconstruction(o_i_all, o);
+#elif (ADVERSARY == MALICIOUS)
     // Correct memory allocation
-    DRSS_i (*o_i_all)[LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
-    DRSS_digest_i (*h_i_all) = malloc(CONST_N * sizeof(DRSS_digest_i));
+    DRSS_i(*o_i_all)[LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
+    DRSS_digest_i(*h_i_all) = malloc(CONST_N * sizeof(DRSS_digest_i));
 
     all_commu_size += CONST_N * (sizeof(DRSS_i) * LAMBDA + sizeof(DRSS_digest_i));
 
-    //Deserialize the data from the response buffer
-    for (int i = 0; i < CONST_N; i++) {
-       
-       int offset = 0;
-       for (int j = 0; j < LAMBDA; j++)
-       {
-           deserialize_DRSS_i(server_data[i].response + offset, &o_i_all[i][j]);
-           offset += sizeof(DRSS_i);
-       }
-       deserialize_DRSS_digest_i(server_data->response + offset, &h_i_all[i]);
-    }
+    // Deserialize the data from the response buffer
+    for (int i = 0; i < CONST_N; i++)
+    {
+        int offset = 0;
+        for (int j = 0; j < LAMBDA; j++)
+        {
+            deserialize_DRSS_i(server_data[i].response + offset, &o_i_all[i][j]);
+            offset += sizeof(DRSS_i);
+        }
+        deserialize_DRSS_digest_i(server_data->response + offset, &h_i_all[i]);
+        }
+        ////////////////////////////////////////////
+        // Client reconstructs received values
+        // Returns 1 if servers acted dishonestly, otherwise 0
+        int test = 0;
+        test |= mal_reconstruction(o_i_all, h_i_all, o);
+        (void)test;
+        ////////////////////////////////////////////
+        free(h_i_all);
+    #endif
 
-    // CLIENT RECONSTRUCTION STAGE
-    ////////////////////////////////////////////
-    f_elm_t(*o) = malloc(LAMBDA * sizeof(f_elm_t));
-    unsigned char L[PRF_BYTES] = {0};
-    ////////////////////////////////////////////
-    // Client reconstructs received values
-    // Returns 1 if servers acted dishonestly, otherwise 0
-    int test=0;
-    test |= mal_reconstruction(o_i_all, h_i_all, o);
-    (void)test;
-    ////////////////////////////////////////////
     // Client computes Legendre symbols
     calc_symbols(o, L);
 
     // Free allocated memory
     free(o_i_all);
-    free(h_i_all);
     free(o);
     free(x_i);
-
-
     // Get the end time after all messages have been dealt with
     if (clock_gettime(CLOCK_MONOTONIC, &end) == -1)
     {

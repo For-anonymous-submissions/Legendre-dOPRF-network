@@ -11,7 +11,12 @@ typedef struct {
     int server_index;
     int sock;
     RSS_i message;
-    uint8_t response[ (sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i)];
+
+#if (ADVERSARY == SEMIHONEST)
+    uint8_t response[sizeof(f_elm_t) * LAMBDA];
+#elif (ADVERSARY == MALICIOUS)
+    uint8_t response[(sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i)];
+#endif
 } server_data_t;
 
 void setup_client_socket(int *sock, const char *server_ip, int port);

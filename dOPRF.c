@@ -1056,6 +1056,18 @@ int mult_RSS_to_RSS_reconstruction(const RSS_i c_j[CONST_N][TAU_i * TAU_i], RSS_
     return test;
 }
 
+
+void serialize_ASS_i(ASS_i *data, uint8_t *buffer)
+{
+    memcpy(buffer, &(*data), sizeof(f_elm_t));
+}
+
+void deserialize_ASS_i(uint8_t *buffer, ASS_i *data)
+{
+    memcpy(&(*data), buffer, sizeof(f_elm_t));
+}
+
+
 // Function to serialize RSS_i into a byte array
 void serialize_RSS_i(RSS_i *data, uint8_t *buffer)
 {

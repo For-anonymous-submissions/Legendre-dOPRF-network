@@ -15,16 +15,15 @@
 #define SEMIHONEST  0
 #define MALICIOUS   1
 
-#define ADVERSARY   MALICIOUS
-// #define ADVERSARY   SEMIHONEST
+#define ADVERSARY SEMIHONEST
 
 // Loads from system enviroment first, then set default values
 #ifndef CONST_T
-#define CONST_T 2
+#define CONST_T 1
 #endif
 
 #ifndef CONST_N
-#define CONST_N 7
+#define CONST_N 3
 #endif
 
 #define MUL_FACTOR  2
@@ -636,6 +635,9 @@ void serialize_DRSS_digest_i(DRSS_digest_i *data, uint8_t *buffer);
 
 void deserialize_DRSS_i(uint8_t *buffer, DRSS_i *data);
 void deserialize_DRSS_digest_i(uint8_t *buffer, DRSS_digest_i *data);
+
+void serialize_ASS_i(ASS_i *data, uint8_t *buffer);
+void deserialize_ASS_i(uint8_t *buffer, ASS_i *data);
 
 void calc_symbols(f_elm_t o[LAMBDA], unsigned char LOPRF[PRF_BYTES]);
 
