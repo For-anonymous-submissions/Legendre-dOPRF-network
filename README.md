@@ -1,46 +1,83 @@
-# Legendre-OPRF
-An ARM64 arithmetic library and the Legendre PRF based distributed OPRF
+# Legendre-dOPRF
+An arithmetic library for the Legendre PRF based distributed OPRF
 
+The optimal way to run experiments is to use the `go.sh` script.
+Otherwise, read below how to use the makefile.
 
-Simplest way to run the experiments:
---
+### Dependencies
+`gcc, blake3`
+OSX:
+	Install the blake3 library with homebrew
+	`brew install blake3`
+	The library is loaded with the `-lblake3` flag in the makefile
+Linux:
+	Install blake3 by following the instructions here
+	https://github.com/BLAKE3-team/BLAKE3
+	https://github.com/BLAKE3-team/BLAKE3/tree/master/c
 
-You can do all benchmarks by giving execution priviledges to the script `go.sh` 
+# Using the benching script
+
+The simplest way to run all experiments is to use the benching script `go.sh`.
+Start by giving it execution priviledges.
 `chmod +x go.sh`
+
+The script uses bash, so make sure the bash location is correct.
+Change the first line `#!/usr/bin/env bash` if needed
 
 This script cleans, compiles and runs the program. Make sure execution priviledges are provided for the directory. 
 
-`./go.sh` Makes prime sizes 128, 192 and 256 bits, and runs benchmarks Legendre dOPRF
+The script accepts four types of arguments:
+- `dOPRF` or `arith` to run the distributed OPRF, or the arithmetic tests and benchmarks
+- `64`, `128`, `192`, `256`, or `512` to set the bitsize of the prime
+- `ALT` to select alternative prime values
+- `FAST` to enable ARM assembly speedups
 
-`./go.sh FAST` Makes prime sizes 128, 192 and 256 bits with ARM64 assebly, and runs all tests and benchmark 
+By default, the script runs `dOPRF` tests for all prime sizes with original primes and no assembly.
 
-`./go.sh X` Makes X bit prime dOPRF, runs all tests and benchmark
+Examples of usage:
 
-`./go.sh X FAST` Makes X bit prime dOPRF with assembly, runs all tests and benchmarks
+- `./go.sh` Makes all prime sizes and runs all tests and benchmarks for dOPRF
 
-`./go.sh arith` runs the arithmetic tests
+- `./go.sh FAST` Makes all prime sizes with ARM64 assebly, and runs all tests and benchmark for dOPRF
 
-`./go.sh arith X FAST` as above with ARM64 assembly and X bit prime
+- `./go.sh X` Makes X bit prime arithmetic, runs all tests and benchmark for dOPRF
 
----
+- `./go.sh X FAST` Makes X bit prime arithmetic with assembly, runs all tests and benchmarks dOPRF
+
+- `./go.sh arith 192 ALT FAST` Runs arithmetic tests and benchmarks for alternative 192 bit prime with ARM assembly on
 
 
-Run `make` which will compile arithmetic tests and benchmarks for 64, 128, 192, 256, 512 bit sized prime fields, as well as the benchmarks for the Legendre dOPRF. The executables are arith64, arith128, arith192, arith256, arith512 for arithmetic tests and benchmarks, and dOPRF64, dOPRF128, dOPRF192, dOPRF256, dOPRF512 for the Legendre dOPRF.
+# Using the makefile
 
-By running `make dOPRF64` you will only compile the 64 bit prime arithmetic (and respectively for 128, 192, 256, 512)
+Run `make` which will compile all dOPRF tests and benchmarks as well as arithmetic tests and benchmarks for 64,128,192,256,512 bit sized prime fields. The executables are dOPRF64, dOPRF128, dOPRF192, dOPRF256, dOPRF512, and arith64, arith128, arith192, arith256, arith512 correspondingly.
 
-By running `make dOPRF64 OPT_LEVEL=FAST` you will compile ARM64 assembly code which is optimised. It speeds up the multiplications, modular reduction, etc. For other prime sizes use `main128`, etc. respectively. Currently assembly is only implemented for 64 and 128 bits. (Some functions are faster without the "FAST" flag due to the compiler unwrapping some loops and speeding up some functions, which it doesn't do when compiling assembly. This only happens for cryptographically irrelevant sized primes (64) due to cache being large enough to allow the compiler to do this speedup.)
+By running `make dOPRF64` you will only compile the 64 bit prime dOPRF (and respectively for 128, 192, 256, 512). 
 
----
+By running `make arith64` you will only compile the 64 bit prime dOPRF (and respectively for 128, 192, 256, 512). 
 
-Lambda is set to NBITS_PRIME/2 by default.
-Change the macro LAMBDA in the dOPRF.c file to change the lambda value.
+The makefile accepts the following flags
+- `make ALT_PRIMES=ALT` if you want to use alternative primes
+- `make OPT_LEVEL=FAST` if you want to use ARM assembly
 
-The parameters n and t are 4 and 1 by default.
-Change the  macros CONST_N and CONST_T in the dOPRF.c file to change the n and t values.
 
-The adversary is malicious by default.
-Change the ADVERSARY macro in the dOPRF.c file to SEMIHONEST to change the adversarial type.
+Example usage:
+- `make dOPRF256 OPT_LEVEL=FAST` makes the executable for 256-bit prime with ARM assembly. You can run it with `./dOPRF256`. 
+
+
+
+# Changing parameters
+
+- The prime size parameter is selected at make, and can be chosen to be `64`, `128`, `192`, `256` or `512`. Internally it is referred to as `NBITS_FIELD`.
+- Each prime size has two hard-coded primes. By default `PRIMES=ORIGINAL` is selected. In the makefile you can choose to change to `PRIMES=ALT` in order to use the alternative primes. Primes are in `parameters.h`.
+
+- The number of output bits is determined by the `LAMBDA` paramter. It is set to be `NBITS_FIELD/2` as to preserve a security level of `LAMBDA`. It can be changed in `dOPRF.h` at line 32
+- The adversarial type is determined by the `ADVERSASRY` parameter. By default it is set to `MALICIOUS`. It can be changed to `SEMIHONEST` in `dOPRF.h` by commenting out lines 19-20.
+- The threshold security parameters `(t,n)` are called `CONST_T` and `CONST_N`. By default they are `(1,4)`. They can be changed in `dOPRF.h` in lines 24, 28.
+- The randomness seed size is determined by the `NBYTES_SEED` parameter. By default `NBYTES_SEED=NBYTES_PRIME`. You can change it in `parameters.h` in line 45.
+- The hash digest size is determined by the `NBYTES_DIGEST` parameter. By default `NBYTES_DIGEST=NBYTES_PRIME`. You can change it in `parameters.h` in line 48.
+
+- The number of test loops for benchmarking the dOPRF is defined with the `LOOPS`  parameter in lines 12-25 of `main.c`.
+- The number of test loops for benchmarking the arithmetic is defined in `bench.h` file.
 
 ---
 
