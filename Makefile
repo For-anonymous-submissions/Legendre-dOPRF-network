@@ -1,6 +1,6 @@
 # Makefile
 CC = gcc
-CFLAGS += -Wall -Wextra -std=gnu11 -Wcomment -O3 -Ofast -Wno-sign-compare -Wno-unused-function 
+CFLAGS += -Wno-comment -Wno-unused-variable -Wall -Wextra -std=gnu11 -O3 -Ofast -Wno-sign-compare -Wno-unused-function 
 # CFLAGS += -g -fsanitize=address -ferror-limit=1
 CFLAGS += -I/usr/local/include
 LDFLAGS += -lblake3
