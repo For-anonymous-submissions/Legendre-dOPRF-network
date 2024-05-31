@@ -7,9 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include "arith.h"
-#include "dOPRF.h"
-#include "network.h"
+#include "../arith.h"
+#include "../dOPRF.h"
+#include "../network.h"
 
 #define PORT 9080
 

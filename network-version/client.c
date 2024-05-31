@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <pthread.h>
-#include "arith.h"
-#include "dOPRF.h"
-#include "network.h"
+#include "../arith.h"
+#include "../dOPRF.h"
+#include "../network.h"
 
 void input(const f_elm_t x, RSS_i x_i[CONST_N], prng_seed seed)
 {
