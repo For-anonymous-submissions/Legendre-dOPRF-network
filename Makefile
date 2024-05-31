@@ -46,14 +46,13 @@ endif
 
 .PHONY: all client server clean
 
-all:  client server local
+all:  client server
 
 client: client256  client512
 server: server256 server512
-# local: local64 local96 local128
 
 clean:
-	rm -f client256  server256 client512 server512 local64 local96 local128
+	rm -f client256  server256 client512 server512
 
 client256: network-version/client.c network.c $(SRC256)
 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
@@ -66,12 +65,3 @@ client512: network-version/client.c  network.c $(SRC512)
 
 server512: network-version/server.c  network.c $(SRC512)
 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# local64: main.c $(SRC128)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# local96: main.c $(SRC192)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=2 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# local128: main.c $(SRC256)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
