@@ -21,6 +21,8 @@ Linux:
 To get the results for a security level of 128, simply run `go128.sh`, then you will obtain a list of files 
 `client256*.log` file which records the online phase efficiency regarding online time and communication, additionally you get estimated offline phase run time at files `offline_SH_cost.log`or `offline_Mal_cost.log`.
 
+Similarly, you run `go256.sh` if you want to get result for a security level of 256.
+
 # Using the benching script
 
 The simplest way to run all experiments is to use the benching script `go.sh`.
