@@ -1,20 +1,29 @@
+
 # Legendre-dOPRF
-An arithmetic library for the Legendre PRF based distributed OPRF
+A library for the Legendre PRF-based distributed OPRF
 
 The optimal way to run experiments is to use the `go.sh` script.
 Otherwise, read below how to use the makefile.
 
 ### Dependencies
 `gcc, blake3`
-OSX:
+
+**OSX:**
 	Install the blake3 library with homebrew
 	`brew install blake3`
-	The library is loaded with the `-lblake3` flag in the makefile
-Linux:
-	Install blake3 by following the instructions here
-	https://github.com/BLAKE3-team/BLAKE3
-	https://github.com/BLAKE3-team/BLAKE3/tree/master/c
 
+**Linux:**
+	Install `cmake`
+	Install blake3 by following the instructions here https://github.com/BLAKE3-team/BLAKE3
+	or
+	Clone the repo,  enter the directory `BLAKE3`, and run
+```
+cmake -S c -B build -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
+```
+
+Blake3 should now be installed in `/usr/local/lib` and the headers in `/usr/local/include`
 
 # How to get efficiency results for the adpated network communication
 
