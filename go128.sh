@@ -1,17 +1,16 @@
 #!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
 
-# Define parameter sets for each setting
-MALICIOUS_PARAM_SETS=(
-    # "1 4"  # First set: CONST_T=1, CONST_N=4
-    # "2 7"  # Second set: CONST_T=2, CONST_N=7
-    "3 10"  # Second set: CONST_T=2, CONST_N=7
-)
-
 SEMIHONEST_PARAM_SETS=(
     "1 3"  # First set: CONST_T=1, CONST_N=3
     "2 5"  # Second set: CONST_T=2, CONST_N=5
     "3 7"  # Second set: CONST_T=2, CONST_N=5
+)
+
+# Define parameter sets for each setting
+MALICIOUS_PARAM_SETS=(
+    "1 4"  # First set: CONST_T=1, CONST_N=4
+    "2 7"  # Second set: CONST_T=2, CONST_N=7
 )
 
 # File containing the macros
@@ -56,8 +55,6 @@ run_tests () {
             sleep 2
         fi
 
-        
-
         # Start the client
         echo "Starting client with CONST_T=$CONST_T and CONST_N=$CONST_N"
         ./client256 > "client256_T${CONST_T}_N${CONST_N}_${SETTING}.log" 2>&1
@@ -72,8 +69,8 @@ run_tests () {
 
 # Run tests for semi-honest setting
 sed -i'' -e "s/^#define ADVERSARY .*/#define ADVERSARY SEMIHONEST/" $HEADER_FILE
-# run_tests  "SH" "${SEMIHONEST_PARAM_SETS[@]}"
-# python3 measure_offline.py 0 128
+run_tests  "SH" "${SEMIHONEST_PARAM_SETS[@]}"
+python3 measure_offline.py 0 128
 
 # Run tests for malicious setting
 sed -i'' -e "s/^#define ADVERSARY .*/#define ADVERSARY MALICIOUS/" $HEADER_FILE

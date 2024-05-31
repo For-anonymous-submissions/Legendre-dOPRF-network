@@ -254,25 +254,6 @@ void sh_reconstruction(const ASS_i o_i[CONST_N][LAMBDA], f_elm_t o[LAMBDA]){
 }
 
 /////////////////////////////////////////////
-// CALCULATE LEGENDRE SYMBOLS (SEMI-HONEST AND MALICIOUS)
-/////////////////////////////////////////////
-// void calc_symbols(f_elm_t o[LAMBDA], unsigned char LOPRF[PRF_BYTES]){
-//     int index, pos;
-//     memset(LOPRF, 0, PRF_BYTES);
-
-//     for(int j = 0; j < LAMBDA; j++){
-//         unsigned char t = 0;
-//         index = j / 8;
-//         pos = j % 8;
-
-//         f_leg(o[j], &t);
-//         LOPRF[index] |= (t << pos);
-//     }
-// }
-
-
-
-/////////////////////////////////////////////
 // SEMI-HONEST PROTOCOL
 /////////////////////////////////////////////
 unsigned char sh_protocol(prng_seed seed){

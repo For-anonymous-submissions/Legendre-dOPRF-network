@@ -653,7 +653,7 @@ int main(int argc, char const *argv[])
     }
 
     char filename[256];
-    snprintf(filename, sizeof(filename), "server_offline_%d_%d_%d.txt", SERVER_ID, CONST_T,CONST_N);
+    snprintf(filename, sizeof(filename), "server_offline_%d_%d_%d_%d.txt", ADVERSARY, SERVER_ID, CONST_T, CONST_N);
 
     // Calculate the elapsed time in milliseconds
     elapsed_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);

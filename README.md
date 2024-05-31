@@ -15,6 +15,12 @@ Linux:
 	https://github.com/BLAKE3-team/BLAKE3
 	https://github.com/BLAKE3-team/BLAKE3/tree/master/c
 
+
+# How to get efficiency results for the adpated network communication
+
+To get the results for a security level of 128, simply run `go128.sh`, then you will obtain a list of files 
+`client256*.log` file which records the online phase efficiency regarding online time and communication, additionally you get estimated offline phase run time at files `offline_SH_cost.log`or `offline_Mal_cost.log`.
+
 # Using the benching script
 
 The simplest way to run all experiments is to use the benching script `go.sh`.
