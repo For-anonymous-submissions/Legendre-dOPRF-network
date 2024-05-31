@@ -49,33 +49,20 @@ endif
 
 all:  client server
 
-client: client128 
-
-server: server128
-# client: client128 client256 client512
-
-# server: server128 server256 server512
+client: client256  client512
+server: server256 server512
 
 clean:
-	rm -f client128  server128
-# clean:
-# 	rm -f client128 client256 client512 server128 server256 server512
+	rm -f client256  server256 client512 server512
 
+client256: client.c $(SRC256)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-client128: client.c $(SRC128)
-	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+server256: server.c $(SRC256)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=3 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# client256: client.c $(SRC256)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+client512: client.c $(SRC512)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
 
-# client512: client.c $(SRC512)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-server128: server.c $(SRC128)
-	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# server256: server.c $(SRC256)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
-
-# server512: server.c $(SRC512)
-# 	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=1 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)
+server512: server.c $(SRC512)
+	$(CC) $(CFLAGS) $(LDFLAGS) -DSEC_LEVEL=4 -DPRIMES=$(PRIMES_VAL) -o $@ $^ $(LIBS)

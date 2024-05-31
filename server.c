@@ -1,4 +1,7 @@
 // server.c
+
+#include <time.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -487,6 +490,7 @@ int main(int argc, char const *argv[])
 {
     int test = 0;
     (void)test;
+    int SERVER_ID = 0;
 
     init_inverses();
     generate_table();
@@ -510,9 +514,14 @@ int main(int argc, char const *argv[])
     free(rk_temp);
     ////////////////////////////////////////////
 
+    struct timespec start, end;
+    long elapsed_ns;
+    double elapsed_us;
+
+   
     RSS_i(*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
 
-#if (ADVERSARY == SEMIHONEST)
+    #if (ADVERSARY == SEMIHONEST)
         ////////////////////////////////////////////
         // TRUSTED PARTY SEED AND KEY DISTRIBUTION
         ////////////////////////////////////////////
@@ -522,6 +531,11 @@ int main(int argc, char const *argv[])
 
         ////////////////////////////////////////////
 
+        // Get the start time before dealing with messages
+        if (clock_gettime(CLOCK_MONOTONIC, &start) == -1)
+        {
+            perror("clock_gettime");
+        }
         ////////////////////////////////////////////
         // LOCAL SETUP STAGE
         ////////////////////////////////////////////
@@ -578,6 +592,11 @@ int main(int argc, char const *argv[])
         mal_tp_setup(seed, k_i, rseed_i, dseed_i, aseedz_i, rseedz_i, dseedz_i);
         ////////////////////////////////////////////
 
+        // Get the start time before dealing with messages
+        if (clock_gettime(CLOCK_MONOTONIC, &start) == -1)
+        {
+            perror("clock_gettime");
+        }
         ////////////////////////////////////////////
         // LOCAL SETUP STAGE
         ////////////////////////////////////////////
@@ -623,14 +642,36 @@ int main(int argc, char const *argv[])
     #endif
     // printf("Complete setup phase. \n");
 
+    if (clock_gettime(CLOCK_MONOTONIC, &end) == -1)
+    {
+        perror("clock_gettime");
+    }
 
-    /**Network part initialization*/
-    uint8_t SERVER_ID = 0;
     if (argc > 1)
     {
         SERVER_ID = atoi(argv[1]);
     }
 
+    char filename[256];
+    snprintf(filename, sizeof(filename), "server_offline_%d_%d_%d.txt", SERVER_ID, CONST_T,CONST_N);
+
+    // Calculate the elapsed time in milliseconds
+    elapsed_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
+    elapsed_us = elapsed_ns / 1e3;
+
+    // printf("Total time required computing preprocessing messages: %.2f µs\n", elapsed_us / CONST_N);
+
+    // Write the elapsed time to the file
+    FILE *file = fopen(filename, "w");
+    if (file == NULL)
+    {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(file, "%.2f\n", elapsed_us / CONST_N);
+    fclose(file);
+
+    /**Network part initialization*/
     int port = PORT + SERVER_ID;
 
     int server_fd, new_socket;
@@ -685,12 +726,14 @@ int main(int argc, char const *argv[])
     uint8_t buffer[sizeof(RSS_i)] = {0};
     size_t read_size = read(new_socket, buffer, sizeof(RSS_i));
     if (read_size >0){
-        printf("Recieve message from client successfully! \n");
+        // printf("Recieve message from client successfully! \n");
     }
 
         // Deserialize RSS_i data
         RSS_i *x_i = malloc(sizeof(RSS_i));
     deserialize_RSS_i(buffer, x_i);
+
+    // printf("Server debug 0\n");
 
     /*********Here starts the server response************/
     ////////////////////////////////////////////
@@ -699,18 +742,40 @@ int main(int argc, char const *argv[])
     size_t total_response_size=0;
     #if (ADVERSARY == SEMIHONEST)
         total_response_size = sizeof(ASS_i) * LAMBDA;
-        ASS_i(*o_i)[LAMBDA] = malloc(total_response_size);
-        sh_evaluation(*x_i, k_i[SERVER_ID], s2_i[SERVER_ID], az_i[SERVER_ID][1], *o_i);
+        
+        ASS_i o_i[LAMBDA];
+        sh_evaluation(*x_i, k_i[SERVER_ID], s2_i[SERVER_ID], az_i[SERVER_ID][1], o_i);
 
+        // printf("Server debug 1\n");
         uint8_t *response = malloc(total_response_size);
+
+        // printf("Server debug 11 %zu %d\n", total_response_size, LAMBDA);
         // Serialize the data into the response buffer
-        int offset = 0;
         for (int i = 0; i < LAMBDA; i++)
         {
-            serialize_ASS_i(o_i[i], response + offset);
-            offset += sizeof(ASS_i);
+            // printf("Server debug 2 %d\n",i);
+            // printf("Source: %p, Destination: %p, Size: %zu\n", (void *)o_i[i], (void *)(response + i * sizeof(ASS_i)), sizeof(ASS_i));
+
+            // if (SERVER_ID==0){
+            //     if (o_i[i] == NULL)
+            //     {
+            //         printf("o_i[%d] is NULL\n", i);
+            //     }
+            //     else
+            //     {
+            //         memcpy(response + i * sizeof(ASS_i), o_i[i], sizeof(ASS_i));
+            //     }
+            //     printf("Id: %d, Address: %p, Value: %zu\n",i, (void *)o_i[i], sizeof(ASS_i));
+            // }
+            memcpy(response + i * sizeof(ASS_i), o_i[i], sizeof(ASS_i));
+
+            // serialize_ASS_i(o_i[i], response + offset);
+            // offset += sizeof(ASS_i);
         }
-    #elif (ADVERSARY == MALICIOUS)
+
+        // printf("Server debug 2\n");
+
+#elif (ADVERSARY == MALICIOUS)
         DRSS_i(*o_i) = malloc(LAMBDA * sizeof(DRSS_i));
         DRSS_digest_i(*h_i) = malloc(sizeof(DRSS_digest_i));
         mal_evaluation(*x_i, k_i[SERVER_ID], s2_i[SERVER_ID], dz_i[SERVER_ID], az_i[SERVER_ID], o_i, *h_i);
@@ -730,7 +795,7 @@ int main(int argc, char const *argv[])
         
         free(h_i);
     #endif
-    //printf("Response sent\n");
+    // printf("Response sent\n");
     /*********Here ends the server response************/
     send(new_socket, response, total_response_size, 0);
     free(response);
@@ -738,7 +803,7 @@ int main(int argc, char const *argv[])
     free(k_i);
     free(s2_i);
     free(az_i);
-    free(o_i);
+    // free(o_i);
 
     close(new_socket);
     close(server_fd);
