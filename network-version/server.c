@@ -425,48 +425,37 @@ int mal_setup_mul_2(RSS_i c_i[LAMBDA][CONST_N][TAU_i * TAU_i], RSS_i s2_i[LAMBDA
 /////////////////////////////////////////////
 // MALICIOUS EVALUATION
 /////////////////////////////////////////////
-void mal_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LAMBDA], const DRSS_i r_i[LAMBDA], const ASS_i az_i[LAMBDA][TAU_i * TAU_i][3], DRSS_i o_i[LAMBDA], DRSS_digest_i h_i)
-{
+void mal_evaluation(const RSS_i x_i, const RSS_i k_i[LAMBDA], const RSS_i s2_i[LAMBDA], const DRSS_i r_i[LAMBDA], const ASS_i az_i[LAMBDA][TAU_i * TAU_i][3], DRSS_i o_i[LAMBDA], hash_digest h_i){
     RSS_i a_i;
     f_elm_t t0, t1;
 
-    f_elm_t(*temp)[TAU_i * TAU_i][LAMBDA] = malloc(sizeof(f_elm_t[TAU_i * TAU_i][LAMBDA]));
+    f_elm_t (*temp) = malloc(sizeof(f_elm_t[TAU_i * TAU_i * LAMBDA]));
 
-    for (int j = 0; j < LAMBDA; j++)
-    {
+
+    for(int j = 0; j < LAMBDA; j++){
         add_RSS_i(x_i, k_i[j], a_i);
 
-        for (share_T T0 = T_0; T0.ind < TAU_i; next_T(&T0))
-        {
-            for (share_T T1 = T_0; T1.ind < TAU_i; next_T(&T1))
-            {
+        for(share_T T0 = T_0; T0.ind < TAU_i; next_T(&T0)){
+        for(share_T T1 = T_0; T1.ind < TAU_i; next_T(&T1)){
 
-                f_mul(a_i[T0.ind], s2_i[j][T1.ind], t0);        // t0 = a_{T_0} * b_{T_1}
-                f_add(t0, r_i[j][T0.ind * TAU_i + T1.ind], t0); // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} = o_{T_1T_2}
+            f_mul(a_i[T0.ind], s2_i[j][T1.ind], t0);                                // t0 = a_{T_0} * b_{T_1}
+            f_add(t0, r_i[j][T0.ind * TAU_i + T1.ind], t0);                         // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} = o_{T_1T_2}
 
-                // hash(t0, h_i[j][T0.ind * TAU_i + T1.ind]);                          // h_i = Hash(t0) = Hash(o_{T_1T_2})
-                f_copy(t0, temp[0][T0.ind * TAU_i + T1.ind][j]);
+            f_copy(t0, temp[(TAU_i * TAU_i) * j + T0.ind * TAU_i + T1.ind]);        // copy and store a_{T_0} * b_{T_1} + r_{T_0T_1}
 
-                f_mul(a_i[T0.ind], az_i[j][T0.ind * TAU_i + T1.ind][0][0], t1); // t1 = a_{T_0} * t^{a, T_0T_1}
-                f_add(t0, t1, t0);                                              // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i
+            f_mul(a_i[T0.ind], az_i[j][T0.ind * TAU_i + T1.ind][0][0], t1);         // t1 = a_{T_0} * t^{a, T_0T_1}
+            f_add(t0, t1, t0);                                                      // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i
 
-                f_mul(s2_i[j][T1.ind], az_i[j][T0.ind * TAU_i + T1.ind][1][0], t1); // t1 = b_{T_1} * t^{b, T_0T_1}_i
-                f_add(t0, t1, t0);                                                  // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i + b_{T_1} * t^{b, T_0T_1}_i
+            f_mul(s2_i[j][T1.ind], az_i[j][T0.ind * TAU_i + T1.ind][1][0], t1);     // t1 = b_{T_1} * t^{b, T_0T_1}_i
+            f_add(t0, t1, t0);                                                      // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i + b_{T_1} * t^{b, T_0T_1}_i
 
-                f_add(t0, az_i[j][T0.ind * TAU_i + T1.ind][2][0], t0); // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i + b_{T_1} * t^{b, T_0T_1}_i + t^{r, T_0T_1}_i
+            f_add(t0, az_i[j][T0.ind * TAU_i + T1.ind][2][0], t0);                  // t0 = a_{T_0} * b_{T_1} + r_{T_0T_1} + a_{T_0} * t^{a, T_0T_1}_i + b_{T_1} * t^{b, T_0T_1}_i + t^{r, T_0T_1}_i
 
-                f_copy(t0, o_i[j][T0.ind * TAU_i + T1.ind]);
-            }
-        }
+            f_copy(t0, o_i[j][T0.ind * TAU_i + T1.ind]);
+        }}
     }
 
-    for (share_T T0 = T_0; T0.ind < TAU_i; next_T(&T0))
-    {
-        for (share_T T1 = T_0; T1.ind < TAU_i; next_T(&T1))
-        {
-            hash_array(temp[0][T0.ind * TAU_i + T1.ind], LAMBDA, h_i[T0.ind * TAU_i + T1.ind]); // h_i = Hash( o^0_{T_0T_1}, o^1_{T_0T_1}, ..., o^{LAMBDA - 1}_{T_0T_1})
-        }
-    }
+    hash_array(temp, LAMBDA * TAU_i * TAU_i, h_i);
 
     free(temp);
 }
@@ -499,6 +488,8 @@ int main(int argc, char const *argv[])
     prng_seed curr_seed;
     memcpy(curr_seed, seed, NBYTES_SEED);
 
+
+
     ////////////////////////////////////////////
     // Generate key
     // Same key as inside mal_tp_setup
@@ -518,7 +509,7 @@ int main(int argc, char const *argv[])
     long elapsed_ns;
     double elapsed_us;
 
-   
+
     RSS_i(*k_i)[LAMBDA] = malloc(sizeof(RSS_i[CONST_N][LAMBDA]));
 
     #if (ADVERSARY == SEMIHONEST)
@@ -589,6 +580,7 @@ int main(int argc, char const *argv[])
         RSS_seed_zero_i(*rseedz_i) = malloc(sizeof(RSS_seed_zero_i[CONST_N]));
         DRSS_seed_zero_i(*dseedz_i) = malloc(sizeof(DRSS_seed_zero_i[CONST_N]));
 
+
         mal_tp_setup(seed, k_i, rseed_i, dseed_i, aseedz_i, rseedz_i, dseedz_i);
         ////////////////////////////////////////////
 
@@ -618,10 +610,14 @@ int main(int argc, char const *argv[])
         for (int i = 0; i < CONST_N; i++)
             mal_setup_mul_1(rz_i[i], c_i[i], rseed_i[i], dseed_i[i]);
 
+
         ////////////////////////////////////////////
         // Re-indexing, i.e., sending messages
 
         mal_setup_reindex_outputs(c_i);
+
+
+
 
         ////////////////////////////////////////////
         // Second step of RSS multiplication
@@ -639,6 +635,8 @@ int main(int argc, char const *argv[])
         free(aseedz_i);
         free(rseedz_i);
         free(dseedz_i);
+
+
     #endif
     // printf("Complete setup phase. \n");
 
@@ -699,6 +697,7 @@ int main(int argc, char const *argv[])
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
 
+
     // Forcefully attaching socket to the port
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
@@ -707,12 +706,14 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+
     if (listen(server_fd, 3) < 0)
     {
         perror("listen");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
+
 
     // printf("Server listening on port %d\n", port);
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
@@ -723,6 +724,7 @@ int main(int argc, char const *argv[])
     }
     /**Network part initialization*/
 
+
     uint8_t buffer[sizeof(RSS_i)] = {0};
     size_t read_size = read(new_socket, buffer, sizeof(RSS_i));
     if (read_size >0){
@@ -732,8 +734,6 @@ int main(int argc, char const *argv[])
         // Deserialize RSS_i data
         RSS_i *x_i = malloc(sizeof(RSS_i));
     deserialize_RSS_i(buffer, x_i);
-
-    // printf("Server debug 0\n");
 
     /*********Here starts the server response************/
     ////////////////////////////////////////////
@@ -777,12 +777,13 @@ int main(int argc, char const *argv[])
 
 #elif (ADVERSARY == MALICIOUS)
         DRSS_i(*o_i) = malloc(LAMBDA * sizeof(DRSS_i));
-        DRSS_digest_i(*h_i) = malloc(sizeof(DRSS_digest_i));
+        // DRSS_digest_i(*h_i) = malloc(sizeof(DRSS_digest_i));
+        hash_digest (*h_i) = malloc(sizeof(hash_digest[CONST_N]));
         mal_evaluation(*x_i, k_i[SERVER_ID], s2_i[SERVER_ID], dz_i[SERVER_ID], az_i[SERVER_ID], o_i, *h_i);
         ////////////////////////////////////////////
         free(dz_i);
 
-        total_response_size = sizeof(DRSS_i) * LAMBDA + sizeof(DRSS_digest_i);
+        total_response_size = sizeof(DRSS_i) * LAMBDA + sizeof(hash_digest);
         uint8_t *response = malloc(total_response_size);
         // Serialize the data into the response buffer
         int offset = 0;
@@ -791,8 +792,8 @@ int main(int argc, char const *argv[])
             serialize_DRSS_i(&(o_i)[i], response + offset);
             offset += sizeof(DRSS_i);
         }
-        serialize_DRSS_digest_i(h_i, response + offset);
-        
+        serialize_hash_digest_i(h_i, response + offset);
+        // printf("Hello\n");
         free(h_i);
     #endif
     // printf("Response sent\n");

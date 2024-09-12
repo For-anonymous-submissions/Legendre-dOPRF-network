@@ -19,11 +19,11 @@
 
 // Loads from system enviroment first, then set default values
 #ifndef CONST_T
-#define CONST_T 2
+#define CONST_T 1
 #endif
 
 #ifndef CONST_N
-#define CONST_N 7
+#define CONST_N 4
 #endif
 
 #define MUL_FACTOR  2
@@ -631,10 +631,10 @@ void serialize_RSS_i(RSS_i *data, uint8_t *buffer);
 void deserialize_RSS_i(uint8_t *buffer, RSS_i *data);
 
 void serialize_DRSS_i(DRSS_i *data, uint8_t *buffer);
-void serialize_DRSS_digest_i(DRSS_digest_i *data, uint8_t *buffer);
+void serialize_hash_digest_i(hash_digest *data, uint8_t *buffer);
 
 void deserialize_DRSS_i(uint8_t *buffer, DRSS_i *data);
-void deserialize_DRSS_digest_i(uint8_t *buffer, DRSS_digest_i *data);
+void deserialize_hash_digest_i(uint8_t *buffer, hash_digest *data);
 
 void serialize_ASS_i(ASS_i *data, uint8_t *buffer);
 void deserialize_ASS_i(uint8_t *buffer, ASS_i *data);

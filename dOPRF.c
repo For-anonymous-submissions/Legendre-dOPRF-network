@@ -1101,14 +1101,14 @@ void serialize_DRSS_i(DRSS_i *data, uint8_t *buffer)
     }
 }
 
-// Serialize DRSS_digest_i
-void serialize_DRSS_digest_i(DRSS_digest_i *data, uint8_t *buffer)
+// Serialize hash_digest_i
+void serialize_hash_digest_i(hash_digest *data, uint8_t *buffer)
 {
     int offset = 0;
-    for (int i = 0; i < TAU_i * TAU_i; i++)
+    for (int i = 0; i < 1; i++)
     {
-        memcpy(buffer + offset, &(*data)[i], sizeof(uint8_t));
-        offset += sizeof(uint8_t);
+        memcpy(buffer + offset, &(*data)[i], sizeof(hash_digest));
+        offset += sizeof(hash_digest);
     }
 }
 
@@ -1122,13 +1122,13 @@ void deserialize_DRSS_i(uint8_t *buffer, DRSS_i *data)
     }
 }
 
-void deserialize_DRSS_digest_i(uint8_t *buffer, DRSS_digest_i *data)
+void deserialize_hash_digest_i(uint8_t *buffer, hash_digest *data)
 {
     int offset = 0;
-    for (int i = 0; i < TAU_i * TAU_i; i++)
+    for (int i = 0; i < 1; i++)
     {
-        memcpy(&(*data)[i], buffer + offset, sizeof(uint8_t));
-        offset += sizeof(uint8_t);
+        memcpy(&(*data)[i], buffer + offset, sizeof(hash_digest));
+        offset += sizeof(hash_digest);
     }
 }
 

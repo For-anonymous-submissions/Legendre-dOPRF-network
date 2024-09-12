@@ -9,6 +9,18 @@ MALICIOUS_PARAM_SETS=(
 # File containing the macros
 HEADER_FILE="dOPRF.h"
 
+# Function to clean up server processes
+cleanup_servers() {
+    echo "Waiting for server processes to finish..."
+    for PID in "${SERVER_PIDS[@]}"; do
+        wait $PID 2>/dev/null || true  # Wait for each server process to complete
+    done
+    echo "All server processes completed."
+}
+
+# Ensure cleanup on exit (even if the script fails)
+trap cleanup_servers EXIT
+
 # Function to run tests
 run_tests () {
     local SETTING=$1
@@ -19,10 +31,14 @@ run_tests () {
         CONST_T=$1
         CONST_N=$2
 
-        # echo "Running tests with CONST_T=$CONST_T and CONST_N=$CONST_N"
         # Modify the macro definitions in the header file
-        sed -i'' -e "s/^#define CONST_T .*/#define CONST_T $CONST_T/" $HEADER_FILE
-        sed -i'' -e "s/^#define CONST_N .*/#define CONST_N $CONST_N/" $HEADER_FILE
+        # Problems with OSX - keeps creating new files.
+        # sed -i'' -e "s/^#define CONST_T .*/#define CONST_T $CONST_T/" $HEADER_FILE
+        # sed -i'' -e "s/^#define CONST_N .*/#define CONST_N $CONST_N/" $HEADER_FILE
+
+        # Temporarily redirect the output to a new file and replace the original
+        sed "s/^#define CONST_T .*/#define CONST_T $CONST_T/" $HEADER_FILE > tmpfile && mv tmpfile $HEADER_FILE
+        sed "s/^#define CONST_N .*/#define CONST_N $CONST_N/" $HEADER_FILE > tmpfile && mv tmpfile $HEADER_FILE
 
         echo "Running tests with CONST_T=$CONST_T and CONST_N=$CONST_N"
 
@@ -33,10 +49,12 @@ run_tests () {
         # Define server amounts based on CONST_N
         IDS=($(seq 0 $((CONST_N - 1))))
 
-        # Start the servers
+        # Start the servers and track PIDs
+        SERVER_PIDS=()  # Reset the PID list
         for ID in "${IDS[@]}"; do
             # echo "Starting server $ID with CONST_T=$CONST_T and CONST_N=$CONST_N"
             ./server512 $ID &
+            SERVER_PIDS+=($!)  # Store the PID of the server
         done
 
         # Give servers a moment to start up
@@ -51,12 +69,15 @@ run_tests () {
         # Start the client
         echo "Starting client with CONST_T=$CONST_T and CONST_N=$CONST_N"
         ./client512 > "client512_T${CONST_T}_N${CONST_N}_${SETTING}.log" 2>&1
-
+``
         # Wait for client to finish
         CLIENT_PID=$!
         wait $CLIENT_PID
 
         echo "Completed tests with CONST_T=$CONST_T and CONST_N=$CONST_N"
+
+        # Kill all server processes for this run
+        # cleanup_servers
     done
 }
 

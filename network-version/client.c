@@ -34,7 +34,7 @@ void *communicate_with_server(void *arg)
     #if (ADVERSARY == SEMIHONEST)
         total_size = sizeof(f_elm_t) * LAMBDA;
     #elif (ADVERSARY == MALICIOUS)
-        total_size = (sizeof(DRSS_i) * LAMBDA) + sizeof(DRSS_digest_i);
+        total_size = (sizeof(DRSS_i) * LAMBDA) + sizeof(hash_digest);
     #endif
     
     while (bytes_received < total_size) {
@@ -56,58 +56,44 @@ void *communicate_with_server(void *arg)
 /////////////////////////////////////////////
 // MALICIOUS RECONSTRUCTION PROTOCOL
 /////////////////////////////////////////////
-int mal_reconstruction(const DRSS_i o_i[CONST_N][LAMBDA], const DRSS_digest_i h_i[CONST_N], f_elm_t o[LAMBDA])
-{
+int mal_reconstruction(const DRSS_i o_i[CONST_N][LAMBDA], const hash_digest h_i[CONST_N], f_elm_t o[LAMBDA]){
 
     hash_digest t_hd;
-    f_elm_t(*temp)[TAU * TAU][LAMBDA] = malloc(sizeof(f_elm_t[CONST_N][TAU * TAU][LAMBDA]));
-    int ret = 0; // Return 1 if detected anomalies (i.e. hashes incorrect)
+    f_elm_t (*temp)[TAU_i * TAU_i * LAMBDA] = malloc(sizeof(f_elm_t[CONST_N][TAU_i * TAU_i * LAMBDA]));
 
-    for (int j = 0; j < LAMBDA; j++)
-    {
-        ind_T Ti_inds_0[CONST_N] = {0};
-        f_elm_t v = {0}; // v =?= a_{T_0} * b_{T_1} + r_{T_0T_1} = o_{T_0T_1}
+    int ret = 0;    //Return 1 if detected anomalies (i.e. hashes incorrect)
 
-        for (share_T T0 = T_0; T0.ind < TAU; next_T(&T0))
-        {
-            for (share_T T1 = T_0; T1.ind < TAU; next_T(&T1))
-            {
-                f_elm_t v_TT = {0};
 
-                for (int i = 0; i < CONST_N; i++)
-                {
-                    if (i_hold_TT(i, T0, T1))
-                    {
-                        f_add(v_TT, o_i[i][j][Ti_inds_0[i]++], v_TT);
-                    }
-                }
-                f_mul(v_TT, f_inverses[S_TT(T0, T1)], v_TT);
-                f_add(v, v_TT, v);
+    for(int j = 0; j < LAMBDA; j++){
+        ind_T Ti_inds[CONST_N] = {0};
+        f_elm_t v = {0};                // v =?= a_{T_0} * b_{T_1} + r_{T_0T_1} = o_{T_0T_1}
 
-                f_copy(v_TT, temp[0][T0.ind * TAU + T1.ind][j]);
+        for(share_T T0 = T_0; T0.ind < TAU; next_T(&T0)){
+        for(share_T T1 = T_0; T1.ind < TAU; next_T(&T1)){
+            f_elm_t v_TT = {0};
+
+            for(int i = 0; i < CONST_N; i++){
+                if(i_hold_TT(i, T0, T1)){
+                    f_add(v_TT, o_i[i][j][Ti_inds[i]], v_TT);   
+                }            
             }
-        }
+            f_mul(v_TT, f_inverses[S_TT(T0, T1)], v_TT);
+            f_add(v, v_TT, v);
+
+            for(int i = 0; i < CONST_N; i++){
+                if(i_hold_TT(i, T0, T1))
+                    f_copy(v_TT, temp[i][j * (TAU_i * TAU_i) + Ti_inds[i]++]);         
+            }
+        }}
         f_copy(v, o[j]);
     }
 
-    ind_T Ti_inds_0[CONST_N] = {0};
-
-    for (share_T T0 = T_0; T0.ind < TAU; next_T(&T0))
-    {
-        for (share_T T1 = T_0; T1.ind < TAU; next_T(&T1))
-        {
-
-            hash_array(temp[0][T0.ind * TAU + T1.ind], LAMBDA, t_hd); // h =?= o_{T_0T_1}
-            for (int i = 0; i < CONST_N; i++)
-            {
-                if (i_hold_TT(i, T0, T1))
-                {
-                    if (memcmp(h_i[i][Ti_inds_0[i]++], t_hd, NBYTES_DIGEST) != 0)
-                        ret = 1;
-                }
-            }
-        }
+    for(int i = 0; i < CONST_N; i++){
+        hash_array(temp[i], LAMBDA * TAU_i * TAU_i, t_hd);
+        if(memcmp(h_i[i], t_hd, NBYTES_DIGEST) != 0)
+            ret = 1;
     }
+
 
     free(temp);
 
@@ -140,6 +126,8 @@ int main()
 
     pthread_t threads[CONST_N];
     server_data_t server_data[CONST_N];
+
+    printf("START HERE\n");
 
     // struct sockaddr_in serv_addrs[CONST_N];
     struct timespec start, end;
@@ -195,6 +183,8 @@ int main()
     // The client analyses differently with different protocols
     f_elm_t(*o) = malloc(LAMBDA * sizeof(f_elm_t));
     unsigned char L[PRF_BYTES] = {0};
+
+
 #if (ADVERSARY == SEMIHONEST)
     ASS_i(*o_i_all) [LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(ASS_i));
 
@@ -213,9 +203,12 @@ int main()
 #elif (ADVERSARY == MALICIOUS)
     // Correct memory allocation
     DRSS_i(*o_i_all)[LAMBDA] = malloc(CONST_N * LAMBDA * sizeof(DRSS_i));
-    DRSS_digest_i(*h_i_all) = malloc(CONST_N * sizeof(DRSS_digest_i));
+    hash_digest(*h_i_all) = malloc(sizeof(hash_digest[CONST_N]));
 
-    all_commu_size += CONST_N * (sizeof(DRSS_i) * LAMBDA + sizeof(DRSS_digest_i));
+    all_commu_size += CONST_N * (sizeof(DRSS_i) * LAMBDA + sizeof(hash_digest));
+
+
+    printf("Hello\n");
 
     // Deserialize the data from the response buffer
     for (int i = 0; i < CONST_N; i++)
@@ -226,16 +219,19 @@ int main()
             deserialize_DRSS_i(server_data[i].response + offset, &o_i_all[i][j]);
             offset += sizeof(DRSS_i);
         }
-        deserialize_DRSS_digest_i(server_data->response + offset, &h_i_all[i]);
-        }
-        ////////////////////////////////////////////
-        // Client reconstructs received values
-        // Returns 1 if servers acted dishonestly, otherwise 0
-        int test = 0;
-        test |= mal_reconstruction(o_i_all, h_i_all, o);
-        (void)test;
-        ////////////////////////////////////////////
-        free(h_i_all);
+        deserialize_hash_digest_i(server_data->response + offset, &h_i_all[i]);
+    }
+
+
+    ////////////////////////////////////////////
+    // Client reconstructs received values
+    // Returns 1 if servers acted dishonestly, otherwise 0
+    int test = 0;
+    test |= mal_reconstruction(o_i_all, h_i_all, o);
+    (void)test;
+    ////////////////////////////////////////////
+    free(h_i_all);
+    
     #endif
 
     // Client computes Legendre symbols
